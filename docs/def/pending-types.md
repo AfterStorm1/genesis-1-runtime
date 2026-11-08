@@ -5,7 +5,7 @@
 | 类型 | 位置 | 最小字段 | 备注 |
 | --- | --- | --- | --- |
 | PersonaCardV3 | core/contract/persona.ts | `spec: "chara_card_v3"; data:{name,...}`（ST V3 最小结构，D5） | 人格切换只换 config/persona/ |
-| MemoryStore | core/contract/memory.ts | `recall(query): Promise<RecallResult \| undefined>; save?()` | 超时由 pipeline 兜底（默认 50ms） |
+| MemoryStore | core/contract/memory.ts | `recall(query): Promise<RecallResult \| undefined>; save?()` | 超时由 pipeline 兜底（默认 50ms）；参考最小实现：`adapters/llm/in-memory-history-store.ts`（滚动 N 轮） |
 | RecallResult | core/contract/memory.ts | `items: Array<{role?; content; ts?}>` | |
 | CognitionContext | core/contract/cognition.ts | `{ contractVersion; clock; logger }` | persona 经适配器注入（Q5），不在 ctx |
 | WorldSnapshot | core/contract/perception.ts | `{ contractVersion; ts; entities }` | |

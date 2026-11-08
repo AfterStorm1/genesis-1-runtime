@@ -54,13 +54,15 @@ node node_modules\tsx\dist\cli.mjs main.ts
 
 ## 接真实 LLM（本地 Ollama / 在线 API 双模式，值级扩展）
 
-`adapters/llm/ollama-cognition.ts`（OpenAI 兼容适配器）+ `demo-chat.ts`（交互式聊天）。
+- 适配器：`adapters/llm/openai-compatible-cognition.ts`（人格卡 system + 记忆历史 + 标记行格式解析）
+- 对话记忆：`adapters/llm/in-memory-history-store.ts`（滚动 N 轮，经契约预留的 MemoryStore→recall 注入）
+- 聊天入口：**双击 `chat.cmd`**，或 `node node_modules\tsx\dist\cli.mjs demo-chat.ts`
 
 **本地模式（默认，无需任何配置）：**
 
 ```cmd
 ollama pull qwen2.5:7b          # 首次需下载模型（约 4.7GB）
-node node_modules\tsx\dist\cli.mjs demo-chat.ts
+chat.cmd                        # 默认 Kaguya 人格；chat.cmd example 用示例人格
 ```
 
 **在线模式（设置 LLM_API_KEY 后自动切换）：**
@@ -69,12 +71,15 @@ node node_modules\tsx\dist\cli.mjs demo-chat.ts
 set LLM_BASE_URL=https://api.deepseek.com
 set LLM_MODEL=deepseek-chat
 set LLM_API_KEY=sk-你的key
-node node_modules\tsx\dist\cli.mjs demo-chat.ts
+chat.cmd
 ```
 
-其他环境变量：`GENESIS_PERSONA` 换人格卡；`OLLAMA_MODEL`/`OLLAMA_BASE_URL` 调本地配置。
-终端里输入任意中文对话，角色以人格卡设定 + LLM 生成回复，走完整
+其他环境变量：`GENESIS_PERSONA` 换人格卡；`OLLAMA_MODEL`/`OLLAMA_BASE_URL` 调本地配置；`CHAT_MAX_TURNS` 调记忆轮数。
+`demo-chat.ts` 同时导出可复用接口 `createChatRuntime / sendUserMessage / runChatLoop`（接 Web/IM 宿主用）。
+终端里输入任意中文对话，角色以人格卡设定 + 多轮记忆 + LLM 生成回复，走完整
 校验→聚合→仲裁→渲染→feedback 链路。适配器是「值级」改动：不触碰 core/contract/。
+
+> 全系统「查什么看哪里」索引见 [`docs/def/architecture.md`](docs/def/architecture.md)。
 
 ## 加 Renderer
 

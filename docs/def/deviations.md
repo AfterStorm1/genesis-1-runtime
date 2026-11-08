@@ -23,4 +23,5 @@
 | D-16 | 测试统一使用自写 `waitForTruthy` 真值轮询助手，不使用 `vi.waitFor` | vitest 的 `vi.waitFor` 语义是「等到回调不抛异常」而非「等到返回真值」，会瞬间通过造成断言提前 | tests/helpers/fixtures.ts |
 | D-17 | A09 测试使用原生 Cognition 直接返回可控 AsyncIterable | 经 mock cognition 的 toIterable 包装后，pipeline 的 `return()` 落在悬停中的外层 async generator 上，其 return 完成信号需内部 await 结算才被处理，导致观察不到 return 调用；手册已知局限 4 亦指出取消依赖适配器正确实现 return() | 测试注释已说明 |
 | D-18 | A07 基准「慢回调阻塞」窗口 20ms、判定阈值 0.8×（手册未规定测量参数） | 5ms 窗口在繁忙机器上计时抖动会造成误报 | 仅证据脚本参数，非契约 |
-| D-19 | 交付目录含 `verify.cmd`（本地一键复验）与 `package-lock.json`（npm 安装产物） | 本机 pnpm 无法联网安装；npm 路径的锁文件随交付保留，CI 模板仍用 pnpm | 已记录 |
+| D-19 | 交付目录含 `verify.cmd`（本地一键复验）、`chat.cmd`（聊天入口）与 `package-lock.json`（npm 安装产物） | 本机 pnpm 无法联网安装；npm 路径的锁文件随交付保留，CI 模板仍用 pnpm | 已记录 |
+| D-20 | 对话功能（值级扩展）：`adapters/llm/openai-compatible-cognition.ts`（本地 Ollama / 在线 API 双模式，含标记行格式解析）、`adapters/llm/in-memory-history-store.ts`（对话记忆，经契约预留的 MemoryStore→recall 路径注入）、`demo-chat.ts`（导出 createChatRuntime/sendUserMessage/runChatLoop 供其他宿主复用） | 任务书 9.1「新增能力只加 adapters/」；全部不动 core/contract/ | 已记录；初始名 ollama-cognition.ts 已正名 |
