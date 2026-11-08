@@ -1,6 +1,7 @@
 # Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）
 
-> 状态：内部受控测试候选；**不是 v1.0.0**；A01a–A17 尚未全量 CI 绿。
+> 状态：内部受控测试候选；**不是 v1.0.0**；A01a–A17 已本地 + GitHub Actions CI 双绿。
+> **新会话 / 接手者第一件事：读 [`docs/HANDOVER.md`](docs/HANDOVER.md)（交接文档，`pnpm handover` 一键刷新）。**
 > 本仓库只交付骨架：契约、强制点、装配链、测试矩阵、最小 demo 与空壳适配器；
 > 不实现真实 LLM / Live2D / VRChat / TTS / 体感设备行为保证。
 
@@ -31,6 +32,7 @@ pnpm scan:payload-shape  # A01b：payload-shape-report.json
 pnpm bench:slots      # A12：slots-bench.json
 pnpm bench:frame-channel # A07：frame-channel-bench.json
 pnpm evidence         # 证据索引
+pnpm handover         # 刷新交接文档 docs/HANDOVER.md（verify.cmd 也会顺带跑）
 pnpm demo             # 直接跑 main.ts（12 步 e2e + 写 log）
 ```
 

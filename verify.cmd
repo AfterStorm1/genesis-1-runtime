@@ -14,6 +14,7 @@ call :run "bench-slots" "node node_modules/tsx/dist/cli.mjs scripts/bench-slots.
 call :run "bench-frame-channel" "node node_modules/tsx/dist/cli.mjs scripts/bench-frame-channel.ts"
 call :run "gen-evidence" "node node_modules/tsx/dist/cli.mjs scripts/gen-evidence.ts"
 call :run "demo-e2e" "node node_modules/tsx/dist/cli.mjs main.ts"
+call :run "handover" "node node_modules/tsx/dist/cli.mjs scripts/gen-handover.ts"
 
 echo.
 echo ============ VERIFY DONE ============

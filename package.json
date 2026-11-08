@@ -16,6 +16,7 @@
     "bench:slots": "tsx scripts/bench-slots.ts",
     "bench:frame-channel": "tsx scripts/bench-frame-channel.ts",
     "evidence": "tsx scripts/gen-evidence.ts",
+    "handover": "tsx scripts/gen-handover.ts",
     "demo": "tsx main.ts",
     "chat": "tsx demo-chat.ts"
   },
