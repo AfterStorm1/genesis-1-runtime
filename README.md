@@ -47,6 +47,35 @@ pnpm demo             # 直接跑 main.ts（12 步 e2e + 写 log）
 2. host 装配时 `createMockCognition({ persona: loadPersona(...) })`（人格经 Cognition 适配器注入，见 Q5 方案）；
 3. 其他装配数据（renderers / parameters / tools）不变。**不改 core/contract/。**
 
+```cmd
+set GENESIS_PERSONA=config\persona\kaguya.persona.json
+node node_modules\tsx\dist\cli.mjs main.ts
+```
+
+## 接真实 LLM（本地 Ollama / 在线 API 双模式，值级扩展）
+
+`adapters/llm/ollama-cognition.ts`（OpenAI 兼容适配器）+ `demo-chat.ts`（交互式聊天）。
+
+**本地模式（默认，无需任何配置）：**
+
+```cmd
+ollama pull qwen2.5:7b          # 首次需下载模型（约 4.7GB）
+node node_modules\tsx\dist\cli.mjs demo-chat.ts
+```
+
+**在线模式（设置 LLM_API_KEY 后自动切换）：**
+
+```cmd
+set LLM_BASE_URL=https://api.deepseek.com
+set LLM_MODEL=deepseek-chat
+set LLM_API_KEY=sk-你的key
+node node_modules\tsx\dist\cli.mjs demo-chat.ts
+```
+
+其他环境变量：`GENESIS_PERSONA` 换人格卡；`OLLAMA_MODEL`/`OLLAMA_BASE_URL` 调本地配置。
+终端里输入任意中文对话，角色以人格卡设定 + LLM 生成回复，走完整
+校验→聚合→仲裁→渲染→feedback 链路。适配器是「值级」改动：不触碰 core/contract/。
+
 ## 加 Renderer
 
 实现 `core/contract/renderer.ts` 的 `Renderer`（capabilities.contractRanges 声明契约范围；`consumesFrames:true` 的还要过 L4.registerFrameCapability 两次校验并落表），放进 `adapters/renderers/`，加入 `RuntimeConfig.renderers`。mount 顺序 await、失败反序清理由装配链保证。

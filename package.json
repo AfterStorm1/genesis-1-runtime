@@ -16,7 +16,8 @@
     "bench:slots": "tsx scripts/bench-slots.ts",
     "bench:frame-channel": "tsx scripts/bench-frame-channel.ts",
     "evidence": "tsx scripts/gen-evidence.ts",
-    "demo": "tsx main.ts"
+    "demo": "tsx main.ts",
+    "chat": "tsx demo-chat.ts"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
