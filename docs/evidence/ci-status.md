@@ -1,6 +1,6 @@
 # CI 状态记录
 
-- 仓库：`https://github.com/Afterstorm1/genesis-1-runtime`
+- 仓库：`https://github.com/AfterStorm1/genesis-1-runtime`（账号曾迁移，旧地址 Afterstorm1 自动跳转）
 - Workflow：`.github/workflows/ci.yml`（5 jobs：typecheck / test / test-e2e / scan / bench）
 - 结果：**全绿（pass）** —— 2026-11-08（北京时间），触发提交 `2d2f6c0`（ci: drop pnpm cache hint）
 - 命令与本地 verify.cmd 一致：`pnpm install --no-frozen-lockfile` + typecheck/test/test:e2e/scan:validate-at/scan:payload-shape/bench:slots/bench:frame-channel
