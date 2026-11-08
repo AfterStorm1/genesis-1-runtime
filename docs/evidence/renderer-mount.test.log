@@ -1,0 +1,4 @@
+Genesis-1 evidence: renderer-mount.test
+result: local pass
+CI: pending / 待 CI
+sequential await; reverse cleanup on failure

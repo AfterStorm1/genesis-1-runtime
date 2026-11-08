@@ -1,0 +1,4 @@
+Genesis-1 evidence: scheduler.test
+result: local pass
+CI: pending / 待 CI
+attach validates; frame chain; expression params clamped

@@ -1,0 +1,29 @@
+# docs/evidence 索引
+
+生成时间：2026-11-08T14:32:41.290Z
+
+状态说明：本地跑过写 local pass；CI 未跑写 pending / 待 CI。不宣称 A01a–A17 已 CI 绿。
+
+| 文件 | 存在 | 状态 |
+| --- | --- | --- |
+| validate-at-scan.json | 是 | local pass（本地生成） |
+| payload-shape-report.json | 是 | local pass（本地生成） |
+| callgraph-report.md | 是 | local pass（本地生成） |
+| safety-merge.test.log | 是 | local pass（本地生成） |
+| sanitize.test.log | 是 | local pass（本地生成） |
+| speech-cas.test.log | 是 | local pass（本地生成） |
+| watchdog.test.log | 是 | local pass（本地生成） |
+| frame-channel-bench.json | 是 | local pass（本地生成） |
+| aggregator.test.log | 是 | local pass（本地生成） |
+| async-batch.test.log | 是 | local pass（本地生成） |
+| multi-runtime.test.log | 是 | local pass（本地生成） |
+| dispose.test.log | 是 | local pass（本地生成） |
+| slots-bench.json | 是 | local pass（本地生成） |
+| naming-report.txt | 是 | local pass（本地生成） |
+| e2e-minimal.log | 是 | local pass（本地生成） |
+| renderer-mount.test.log | 是 | local pass（本地生成） |
+| feedback-kinds.test.log | 是 | local pass（本地生成） |
+| validate-at.test.log | 是 | local pass（本地生成） |
+
+全部 18 个产物已生成。
+

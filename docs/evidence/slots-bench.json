@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-11-08T14:32:39.864Z",
+  "result": "local pass",
+  "ci": "pending / 待 CI",
+  "handbookThresholds": {
+    "emptyRunUs": "< 1μs（CI 硬件判定）",
+    "emptyFlushUs": "< 1μs（CI 硬件判定）",
+    "emptyMigrateUs": "< 1μs（CI 硬件判定）",
+    "linearRegression": "< 1.2（CI 硬件判定）"
+  },
+  "localAssertions": {
+    "emptyUnder100us": true,
+    "regressionUnder1_5": true
+  },
+  "results": [
+    {
+      "label": "hook-chain.run(empty)",
+      "nsPerOp": 40.929,
+      "usPerOp": 0.040929
+    },
+    {
+      "label": "source-hub.flush(empty)",
+      "nsPerOp": 23.9325,
+      "usPerOp": 0.023932500000000002
+    },
+    {
+      "label": "contract.validateAndMigrate(no-op)",
+      "nsPerOp": 12.936,
+      "usPerOp": 0.012936
+    },
+    {
+      "label": "hook-chain.run(n=1)",
+      "nsPerOp": 704.642,
+      "usPerOp": 0.7046420000000001
+    },
+    {
+      "label": "hook-chain.run(n=2)",
+      "nsPerOp": 700.507,
+      "usPerOp": 0.700507
+    },
+    {
+      "label": "hook-chain.run(n=4)",
+      "nsPerOp": 894.725,
+      "usPerOp": 0.894725
+    },
+    {
+      "label": "hook-chain.run(n=8)",
+      "nsPerOp": 867.791,
+      "usPerOp": 0.8677910000000001
+    }
+  ],
+  "regression": 1.2315345948722898
+}

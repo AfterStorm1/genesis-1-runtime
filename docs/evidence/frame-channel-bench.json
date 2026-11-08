@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-11-08T14:32:40.603Z",
+  "result": "local pass",
+  "ci": "pending / 待 CI",
+  "semantics": {
+    "slowSubscriberBlocksCurrentPublish": true,
+    "dropIfBusyOnlyPreventsReentrancy": true
+  },
+  "measurements": [
+    {
+      "label": "publish_with_slow_subscriber_ms",
+      "value": "19.354"
+    },
+    {
+      "label": "publish_no_subscriber_ns_per_op",
+      "value": "59.9"
+    },
+    {
+      "label": "dropIfBusy_reentrant",
+      "value": "[1,3]"
+    }
+  ]
+}

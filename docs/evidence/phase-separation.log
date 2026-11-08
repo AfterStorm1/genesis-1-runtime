@@ -1,0 +1,4 @@
+Genesis-1 evidence: phase-separation
+result: local pass
+CI: pending / 待 CI
+no validateAt in frame paths; single registration check

@@ -1,0 +1,4 @@
+Genesis-1 evidence: input-bus.test
+result: local pass
+CI: pending / 待 CI
+inject validates InputBus.onDelta; snapshot validates on read

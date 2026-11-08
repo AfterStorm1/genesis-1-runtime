@@ -1,0 +1,20 @@
+Genesis-1 e2e-minimal.log (A14)
+result: local pass
+CI: pending / 待 CI
+01. [PASS] InputBus.inject 可达 Cognition.onInput — cognition.inputs=1
+02. [PASS] consumeIterator 逐 item validateAt — Cognition.onInput.output=2
+03. [PASS] pendingOutputs 含 emotion 与 speech — emotion=happy speech=echo: hi
+04. [PASS] l3Tick 调 Aggregator.aggregate — Aggregator.aggregate=1
+05. [PASS] 默认 aggregator 不经 Hub，flush 为空 — sources=0
+06. [PASS] 逐 signal validateAt L3.aggregate.output + L3.dispatch — L3.aggregate.output=1 L3.dispatch=1
+07. [PASS] arbiter.submit 首行 clamp / 限流 / id 校验 — id=rt:e2e:l3:1 priority=76 dispatches=1
+08. [PASS] onDispatch 先 speech.create 再 dispatch — applyStates={"signalId":"rt:e2e:l3:1","sessionState":"requested"}
+09. [PASS] TextRenderer 收到 signal.id — signalId=rt:e2e:l3:1
+10. [PASS] MockSpeechRenderer 看到 requested + sanitizedText — state=requested sanitized=true
+11. [PASS] audio_started→playing; audio_done→done+feedback_done; 幂等 — trace=[{"kind":"audio_started","state":"playing"},{"kind":"audio_done","state":"done"}] reason=feedback_done
+12. [PASS] dispose：无 active signal / 无 pending session / 无未退订监听 — active=0 session=done probeEvents=0
+dispose snapshot:
+  idempotentRelease = true
+  activeSignalsAfterDispose = 0
+  pendingSessionsAfterDispose = "done"
+  busLeak = 0

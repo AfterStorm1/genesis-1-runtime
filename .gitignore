@@ -1,0 +1,8 @@
+node_modules/
+.pnpm-home/
+.pnpm-local/
+.pnpm-store/
+.pnpm-state/
+.pnpm-cache/
+.dbg/
+*.log.tmp

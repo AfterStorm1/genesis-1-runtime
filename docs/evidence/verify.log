@@ -1,0 +1,241 @@
+================================================== 
+["typecheck"]  node node_modules/typescript/bin/tsc --noEmit 
+ 
+ 
+["typecheck"] exit=0 
+ 
+================================================== 
+["unit-tests"]  node node_modules/vitest/vitest.mjs run --config vitest.config.ts 
+ 
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mD:/Whale-chan/Hui/runtime[39m
+
+ [32m✓[39m [35m|unit|[39m tests/unit/speech-cas.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/watchdog.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/hook-chain.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/validate-at.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 31[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/tool.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/aggregator.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/scheduler.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/multi-runtime.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 33[2mms[22m[39m
+[90mstderr[2m | tests/unit/async-batch.test.ts[2m > [22m[2mA09 async batch[2m > [22m[2m超限：maxBatchOutputs 截断 + return()
+[22m[39m[pipeline] batch_truncated
+
+ [32m✓[39m [35m|unit|[39m tests/unit/phase-separation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 95[2mms[22m[39m
+[90mstderr[2m | tests/unit/async-batch.test.ts[2m > [22m[2mA09 async batch[2m > [22m[2m迭代器抛错：整批失败不产 signal；必须 return() 清理
+[22m[39m[pipeline] batch_iterator_error Error: boom
+    at [90mD:\Whale-chan\Hui\runtime\[39mtests\unit\async-batch.test.ts:84:21
+    at [90mfile:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:5
+    at runTest [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:11[90m)[39m
+    at runSuite [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runFiles [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1262:5[90m)[39m
+    at startTests [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1271:3[90m)[39m
+    at [90mfile:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.3qpJUEJM.js:126:11
+    at withEnv [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.3qpJUEJM.js:90:5[90m)[39m
+    at run [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.3qpJUEJM.js:112:3[90m)[39m
+
+[90mstdout[2m | tests/unit/async-batch.test.ts[2m > [22m[2mA09 async batch[2m > [22m[2mPromise 路径：单 output 直接 validateAt 后进 pendingOutputs，不受批次约束
+[22m[39m[renderer:text] rt:a09p:l3:1 emotion=happy priority=50
+
+[90mstderr[2m | tests/unit/async-batch.test.ts[2m > [22m[2mA09 async batch[2m > [22m[2m逐 item validateAt：坏版本 output 使整批失败
+[22m[39m[pipeline] batch_iterator_error Error: contract_version_mismatch:cognitionOut:expected=1.0.0:actual=0.1.0
+    at Object.validate [90m(D:\Whale-chan\Hui\runtime\[39mcore\migrate\contract-registry-impl.ts:71:15[90m)[39m
+    at Module.validateAt [90m(D:\Whale-chan\Hui\runtime\[39mcore\contract\entry-points.ts:229:14[90m)[39m
+    at consumeIterator [90m(D:\Whale-chan\Hui\runtime\[39mcore\pipeline.ts:136:9[90m)[39m
+    at handleInput [90m(D:\Whale-chan\Hui\runtime\[39mcore\pipeline.ts:232:7[90m)[39m
+
+ [32m✓[39m [35m|unit|[39m tests/unit/async-batch.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 168[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/dispose.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 59[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/safety-merge.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 28[2mms[22m[39m
+[90mstderr[2m | tests/unit/feedback-kinds.test.ts[2m > [22m[2mA16 feedback kinds[2m > [22m[2mrenderer_error 只记 logger + bus 系统事件，不改 session
+[22m[39m[renderer_error] { sourceId: [32m'renderer:speech'[39m, error: [32m'gpu-lost'[39m }
+
+ [32m✓[39m [35m|unit|[39m tests/unit/feedback-kinds.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 56[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/id-registry.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/slots.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 72[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/migrate.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/ledger.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/naming.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 140[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/sanitize.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+[90mstderr[2m | tests/unit/frame-channel.test.ts[2m > [22m[2mA07 frame-channel[2m > [22m[2m异常隔离：单订阅者抛错不影响其余订阅者
+[22m[39m[frame-channel] subscriber error Error: boom
+    at Object.cb [90m(D:\Whale-chan\Hui\runtime\[39mtests\unit\frame-channel.test.ts:56:13[90m)[39m
+    at Object.publish [90m(D:\Whale-chan\Hui\runtime\[39mcore\scheduler\frame-channel-impl.ts:23:13[90m)[39m
+    at [90mD:\Whale-chan\Hui\runtime\[39mtests\unit\frame-channel.test.ts:59:21
+    at Proxy.assertThrows [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4mchai[24m/index.js:2767:5[90m)[39m
+    at Proxy.methodWrapper [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4mchai[24m/index.js:1686:25[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:1029:16[90m)[39m
+    at Proxy.overwritingMethodWrapper [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4mchai[24m/index.js:1735:33[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:1509:21[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:972:17[90m)[39m
+    at Proxy.methodWrapper [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4mchai[24m/index.js:1686:25[90m)[39m
+
+ [32m✓[39m [35m|unit|[39m tests/unit/frame-channel.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 60[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/hub.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/input-bus.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/renderer-mount.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m23 passed[39m[22m[90m (23)[39m
+[2m      Tests [22m [1m[32m131 passed[39m[22m[90m (131)[39m
+[2m   Start at [22m 22:32:26
+[2m   Duration [22m 6.52s[2m (transform 5.60s, setup 0ms, collect 18.51s, tests 1.03s, environment 16ms, prepare 16.30s)[22m
+
+ 
+["unit-tests"] exit=0 
+ 
+================================================== 
+["e2e-tests"]  node node_modules/vitest/vitest.mjs run --config vitest.e2e.config.ts 
+ 
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mD:/Whale-chan/Hui/runtime[39m
+
+[90mstdout[2m | tests/e2e/e2e-minimal.test.ts[2m > [22m[2mA14 e2e minimal[2m > [22m[2m12 步断言全绿并输出 e2e-minimal.log
+[22m[39m[renderer:text] rt:e2e:l3:1 emotion=happy priority=76
+
+ [32m✓[39m [34m|e2e|[39m tests/e2e/e2e-minimal.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 55[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m   Start at [22m 22:32:34
+[2m   Duration [22m 2.12s[2m (transform 510ms, setup 0ms, collect 743ms, tests 55ms, environment 0ms, prepare 470ms)[22m
+
+ 
+["e2e-tests"] exit=0 
+ 
+================================================== 
+["scan-validate-at"]  node node_modules/tsx/dist/cli.mjs scripts/scan-validate-at.ts 
+ 
+scan:validate-at → {"pass":true,"missing":[],"unknownEntries":0}
+ 
+["scan-validate-at"] exit=0 
+ 
+================================================== 
+["payload-shape"]  node node_modules/tsx/dist/cli.mjs scripts/payload-shape-report.ts 
+ 
+scan:payload-shape → pass=true failures=0
+ 
+["payload-shape"] exit=0 
+ 
+================================================== 
+["bench-slots"]  node node_modules/tsx/dist/cli.mjs scripts/bench-slots.ts 
+ 
+{
+  "generatedAt": "2026-11-08T14:32:39.864Z",
+  "result": "local pass",
+  "ci": "pending / 待 CI",
+  "handbookThresholds": {
+    "emptyRunUs": "< 1μs（CI 硬件判定）",
+    "emptyFlushUs": "< 1μs（CI 硬件判定）",
+    "emptyMigrateUs": "< 1μs（CI 硬件判定）",
+    "linearRegression": "< 1.2（CI 硬件判定）"
+  },
+  "localAssertions": {
+    "emptyUnder100us": true,
+    "regressionUnder1_5": true
+  },
+  "results": [
+    {
+      "label": "hook-chain.run(empty)",
+      "nsPerOp": 40.929,
+      "usPerOp": 0.040929
+    },
+    {
+      "label": "source-hub.flush(empty)",
+      "nsPerOp": 23.9325,
+      "usPerOp": 0.023932500000000002
+    },
+    {
+      "label": "contract.validateAndMigrate(no-op)",
+      "nsPerOp": 12.936,
+      "usPerOp": 0.012936
+    },
+    {
+      "label": "hook-chain.run(n=1)",
+      "nsPerOp": 704.642,
+      "usPerOp": 0.7046420000000001
+    },
+    {
+      "label": "hook-chain.run(n=2)",
+      "nsPerOp": 700.507,
+      "usPerOp": 0.700507
+    },
+    {
+      "label": "hook-chain.run(n=4)",
+      "nsPerOp": 894.725,
+      "usPerOp": 0.894725
+    },
+    {
+      "label": "hook-chain.run(n=8)",
+      "nsPerOp": 867.791,
+      "usPerOp": 0.8677910000000001
+    }
+  ],
+  "regression": 1.2315345948722898
+}
+ 
+["bench-slots"] exit=0 
+ 
+================================================== 
+["bench-frame-channel"]  node node_modules/tsx/dist/cli.mjs scripts/bench-frame-channel.ts 
+ 
+{
+  "generatedAt": "2026-11-08T14:32:40.603Z",
+  "result": "local pass",
+  "ci": "pending / 待 CI",
+  "semantics": {
+    "slowSubscriberBlocksCurrentPublish": true,
+    "dropIfBusyOnlyPreventsReentrancy": true
+  },
+  "measurements": [
+    {
+      "label": "publish_with_slow_subscriber_ms",
+      "value": "19.354"
+    },
+    {
+      "label": "publish_no_subscriber_ns_per_op",
+      "value": "59.9"
+    },
+    {
+      "label": "dropIfBusy_reentrant",
+      "value": "[1,3]"
+    }
+  ]
+}
+ 
+["bench-frame-channel"] exit=0 
+ 
+================================================== 
+["gen-evidence"]  node node_modules/tsx/dist/cli.mjs scripts/gen-evidence.ts 
+ 
+evidence index: 18/18 present
+ 
+["gen-evidence"] exit=0 
+ 
+================================================== 
+["demo-e2e"]  node node_modules/tsx/dist/cli.mjs main.ts 
+ 
+[renderer:text] rt:e2e:l3:1 emotion=happy priority=76
+Genesis-1 e2e-minimal.log (A14)
+result: local pass
+CI: pending / 待 CI
+01. [PASS] InputBus.inject 可达 Cognition.onInput — cognition.inputs=1
+02. [PASS] consumeIterator 逐 item validateAt — Cognition.onInput.output=2
+03. [PASS] pendingOutputs 含 emotion 与 speech — emotion=happy speech=echo: hi
+04. [PASS] l3Tick 调 Aggregator.aggregate — Aggregator.aggregate=1
+05. [PASS] 默认 aggregator 不经 Hub，flush 为空 — sources=0
+06. [PASS] 逐 signal validateAt L3.aggregate.output + L3.dispatch — L3.aggregate.output=1 L3.dispatch=1
+07. [PASS] arbiter.submit 首行 clamp / 限流 / id 校验 — id=rt:e2e:l3:1 priority=76 dispatches=1
+08. [PASS] onDispatch 先 speech.create 再 dispatch — applyStates={"signalId":"rt:e2e:l3:1","sessionState":"requested"}
+09. [PASS] TextRenderer 收到 signal.id — signalId=rt:e2e:l3:1
+10. [PASS] MockSpeechRenderer 看到 requested + sanitizedText — state=requested sanitized=true
+11. [PASS] audio_started→playing; audio_done→done+feedback_done; 幂等 — trace=[{"kind":"audio_started","state":"playing"},{"kind":"audio_done","state":"done"}] reason=feedback_done
+12. [PASS] dispose：无 active signal / 无 pending session / 无未退订监听 — active=0 session=done probeEvents=0
+dispose snapshot:
+  idempotentRelease = true
+  activeSignalsAfterDispose = 0
+  pendingSessionsAfterDispose = "done"
+  busLeak = 0
+ 
+["demo-e2e"] exit=0 
+ 

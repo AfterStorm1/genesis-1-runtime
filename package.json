@@ -1,0 +1,27 @@
+{
+  "name": "genesis-1-runtime-skeleton",
+  "version": "1.0.0-rc.5",
+  "private": true,
+  "description": "Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）。骨架/插槽/判定表：不实现真实 LLM/Live2D/VRChat/TTS/体感行为保证。",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "scan:validate-at": "tsx scripts/scan-validate-at.ts",
+    "scan:payload-shape": "tsx scripts/payload-shape-report.ts",
+    "bench:slots": "tsx scripts/bench-slots.ts",
+    "bench:frame-channel": "tsx scripts/bench-frame-channel.ts",
+    "evidence": "tsx scripts/gen-evidence.ts",
+    "demo": "tsx main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}

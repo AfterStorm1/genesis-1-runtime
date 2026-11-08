@@ -1,0 +1,239 @@
+{
+  "generatedAt": "2026-11-08T14:32:38.910Z",
+  "result": "local pass",
+  "ci": "pending / 待 CI",
+  "sites": [
+    {
+      "entry": "ParameterRegistry.register",
+      "file": "composition/composition-root.ts",
+      "line": 110,
+      "expectedKey": "def",
+      "payloadKeys": [
+        "def"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "L4.register",
+      "file": "composition/composition-root.ts",
+      "line": 134,
+      "expectedKey": "renderer",
+      "payloadKeys": [
+        "renderer"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "L4.registerFrameCapability",
+      "file": "composition/composition-root.ts",
+      "line": 163,
+      "expectedKey": "cap",
+      "payloadKeys": [
+        "cap"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "L4.registerFrameCapability.ranges",
+      "file": "composition/composition-root.ts",
+      "line": 164,
+      "expectedKey": "cap",
+      "payloadKeys": [
+        "cap"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "PipelineHook.register",
+      "file": "composition/composition-root.ts",
+      "line": 181,
+      "expectedKey": "hook",
+      "payloadKeys": [
+        "hook"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "L4.publishFeedback",
+      "file": "composition/composition-root.ts",
+      "line": 215,
+      "expectedKey": "fb",
+      "payloadKeys": [
+        "fb"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "L35.emitFrame",
+      "file": "composition/composition-root.ts",
+      "line": 248,
+      "expectedKey": "frame",
+      "payloadKeys": [
+        "frame"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "Cognition.onInput.output",
+      "file": "core/pipeline.ts",
+      "line": 136,
+      "expectedKey": "output",
+      "payloadKeys": [
+        "output"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "Aggregator.aggregate",
+      "file": "core/pipeline.ts",
+      "line": 204,
+      "expectedKey": "ctx",
+      "payloadKeys": [
+        "ctx"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "L3.aggregate.output",
+      "file": "core/pipeline.ts",
+      "line": 216,
+      "expectedKey": "signal",
+      "payloadKeys": [
+        "signal"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "L3.dispatch",
+      "file": "core/pipeline.ts",
+      "line": 217,
+      "expectedKey": "signal",
+      "payloadKeys": [
+        "signal"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "Cognition.onInput",
+      "file": "core/pipeline.ts",
+      "line": 224,
+      "expectedKey": "input",
+      "payloadKeys": [
+        "input"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "Cognition.onInput.output",
+      "file": "core/pipeline.ts",
+      "line": 236,
+      "expectedKey": "output",
+      "payloadKeys": [
+        "output"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "InputBus.onDelta",
+      "file": "core/input-bus/input-bus-impl.ts",
+      "line": 21,
+      "expectedKey": "delta",
+      "payloadKeys": [
+        "delta"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "InputBus.snapshot",
+      "file": "core/input-bus/input-bus-impl.ts",
+      "line": 44,
+      "expectedKey": "snapshot",
+      "payloadKeys": [
+        "snapshot"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "L35.attachTrackingSource",
+      "file": "core/scheduler/scheduler-impl.ts",
+      "line": 51,
+      "expectedKey": "source",
+      "payloadKeys": [
+        "source"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "Scheduler.submit",
+      "file": "core/scheduler/scheduler-impl.ts",
+      "line": 65,
+      "expectedKey": "intent",
+      "payloadKeys": [
+        "intent"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "Scheduler.submitExpression",
+      "file": "core/scheduler/scheduler-impl.ts",
+      "line": 69,
+      "expectedKey": "intent",
+      "payloadKeys": [
+        "intent"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "ExpressionSource.register",
+      "file": "core/source-hub/hub-impl.ts",
+      "line": 15,
+      "expectedKey": "source",
+      "payloadKeys": [
+        "source"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "ExpressionSource.emit",
+      "file": "core/source-hub/hub-impl.ts",
+      "line": 28,
+      "expectedKey": "source",
+      "payloadKeys": [
+        "source"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "ToolRegistry.register",
+      "file": "core/tool/tool-registry-impl.ts",
+      "line": 19,
+      "expectedKey": "def",
+      "payloadKeys": [
+        "def"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "ToolRegistry.invoke",
+      "file": "core/tool/tool-registry-impl.ts",
+      "line": 35,
+      "expectedKey": "def",
+      "payloadKeys": [
+        "def"
+      ],
+      "ok": true
+    },
+    {
+      "entry": "CapabilityLedger.register",
+      "file": "core/component/capability-ledger-impl.ts",
+      "line": 19,
+      "expectedKey": "cap",
+      "payloadKeys": [
+        "cap"
+      ],
+      "ok": true
+    }
+  ],
+  "failures": [],
+  "pass": true
+}

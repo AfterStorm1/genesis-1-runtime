@@ -1,0 +1,4 @@
+Genesis-1 evidence: hook-chain.test
+result: local pass
+CI: pending / 待 CI
+empty chain constant; minimal read-only context

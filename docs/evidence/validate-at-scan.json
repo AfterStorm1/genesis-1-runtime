@@ -1,0 +1,327 @@
+{
+  "generatedAt": "2026-11-08T14:32:37.681Z",
+  "contractCandidate": "1.0.0-rc.5",
+  "result": "local pass",
+  "ci": "pending / 待 CI",
+  "entries": [
+    {
+      "entry": "L3.aggregate.output",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/pipeline.ts",
+          "line": 216,
+          "via": "validateAt",
+          "payloadKeys": [
+            "signal"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "Aggregator.aggregate",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/pipeline.ts",
+          "line": 204,
+          "via": "validateAt",
+          "payloadKeys": [
+            "ctx"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "L3.dispatch",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/pipeline.ts",
+          "line": 217,
+          "via": "validateAt",
+          "payloadKeys": [
+            "signal"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "L35.emitFrame",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "composition/composition-root.ts",
+          "line": 248,
+          "via": "sampledValidator",
+          "payloadKeys": [
+            "frame"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "Scheduler.submit",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/scheduler/scheduler-impl.ts",
+          "line": 65,
+          "via": "validateAt",
+          "payloadKeys": [
+            "intent"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "Scheduler.submitExpression",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/scheduler/scheduler-impl.ts",
+          "line": 69,
+          "via": "validateAt",
+          "payloadKeys": [
+            "intent"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "L4.publishFeedback",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "composition/composition-root.ts",
+          "line": 215,
+          "via": "validateAt",
+          "payloadKeys": [
+            "fb"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "InputBus.snapshot",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/input-bus/input-bus-impl.ts",
+          "line": 44,
+          "via": "validateAt",
+          "payloadKeys": [
+            "snapshot"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "InputBus.onDelta",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/input-bus/input-bus-impl.ts",
+          "line": 21,
+          "via": "validateAt",
+          "payloadKeys": [
+            "delta"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "ToolRegistry.invoke",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/tool/tool-registry-impl.ts",
+          "line": 35,
+          "via": "validateAt",
+          "payloadKeys": [
+            "def"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "Cognition.onInput",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/pipeline.ts",
+          "line": 224,
+          "via": "validateAt",
+          "payloadKeys": [
+            "input"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "Cognition.onInput.output",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/pipeline.ts",
+          "line": 136,
+          "via": "validateAt",
+          "payloadKeys": [
+            "output"
+          ]
+        },
+        {
+          "file": "core/pipeline.ts",
+          "line": 236,
+          "via": "validateAt",
+          "payloadKeys": [
+            "output"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "ExpressionSource.emit",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/source-hub/hub-impl.ts",
+          "line": 28,
+          "via": "validateAt",
+          "payloadKeys": [
+            "source"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "L4.register",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "composition/composition-root.ts",
+          "line": 134,
+          "via": "validateAt",
+          "payloadKeys": [
+            "renderer"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "L4.registerFrameCapability",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "composition/composition-root.ts",
+          "line": 163,
+          "via": "validateAt",
+          "payloadKeys": [
+            "cap"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "L4.registerFrameCapability.ranges",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "composition/composition-root.ts",
+          "line": 164,
+          "via": "validateAt",
+          "payloadKeys": [
+            "cap"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "L35.attachTrackingSource",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/scheduler/scheduler-impl.ts",
+          "line": 51,
+          "via": "validateAt",
+          "payloadKeys": [
+            "source"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "ToolRegistry.register",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/tool/tool-registry-impl.ts",
+          "line": 19,
+          "via": "validateAt",
+          "payloadKeys": [
+            "def"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "ParameterRegistry.register",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "composition/composition-root.ts",
+          "line": 110,
+          "via": "validateAt",
+          "payloadKeys": [
+            "def"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "PipelineHook.register",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "composition/composition-root.ts",
+          "line": 181,
+          "via": "validateAt",
+          "payloadKeys": [
+            "hook"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "ExpressionSource.register",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/source-hub/hub-impl.ts",
+          "line": 15,
+          "via": "validateAt",
+          "payloadKeys": [
+            "source"
+          ]
+        }
+      ]
+    },
+    {
+      "entry": "CapabilityLedger.register",
+      "optional": false,
+      "callSites": [
+        {
+          "file": "core/component/capability-ledger-impl.ts",
+          "line": 19,
+          "via": "validateAt",
+          "payloadKeys": [
+            "cap"
+          ]
+        }
+      ]
+    }
+  ],
+  "missing": [],
+  "unknownEntries": [],
+  "pass": true
+}

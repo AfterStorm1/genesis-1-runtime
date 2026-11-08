@@ -1,0 +1,11 @@
+{
+  "spec": "chara_card_v3",
+  "data": {
+    "name": "Genesis-1 Demo Persona",
+    "description": "占位人格卡示例（字段待确认，见 docs/def/pending-types.md）",
+    "personality": "placeholder",
+    "scenario": "minimal skeleton demo",
+    "first_mes": "hi",
+    "tags": ["demo", "placeholder", "skeleton"]
+  }
+}

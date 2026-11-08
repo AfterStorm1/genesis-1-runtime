@@ -1,0 +1,4 @@
+Genesis-1 evidence: speech-cas.test
+result: local pass
+CI: pending / 待 CI
+mapping table; first-write-wins; dispose fallback

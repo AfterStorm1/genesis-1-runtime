@@ -1,0 +1,4 @@
+Genesis-1 evidence: sanitize.test
+result: local pass
+CI: pending / 待 CI
+strict brand; JSON loses brand; WeakSet miss rejects

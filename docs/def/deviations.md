@@ -1,0 +1,26 @@
+# 偏差清单（与附件 A v1.0.0-rc.5-r1 不一致处）
+
+无契约语义偏差（字段名 / kind / actualPath / payloadShape / dispose 顺序 / 22 个入口均逐字实现）。
+以下为**工程性偏差**（实现位置、示意代码取舍、补充字段），全部经用户确认或属手册「至少包含 / 代码为示意」授权范围。
+
+| # | 偏差 | 依据 | 处理 |
+| --- | --- | --- | --- |
+| D-1 | `ToolRegistry.register` 校验点为 impl 内部唯一调用点，compose 不重复前置校验（§4.2 片段中的显式调用未实现） | 用户 Q4 确认；§3.5 契约注释「内部调 validateAt」；附录 C「代码为示意，不作为最终实现」；A02「注册期项每个组件实例只校验一次」 | impl 内校验；`CapabilityLedger.register` / `L35.attachTrackingSource` 同类处理 |
+| D-2 | 支撑类型（PersonaCardV3 / MemoryStore / RecallResult / CognitionContext / WorldSnapshot / WorldDelta / Logger / WorldEntity / ToolHandler / ContractMigratorEntry / JSONSchema / InputBus / SignalDispatcher / RendererRegistry / FeedbackChannel）按最小必要字段实现，标注 `// minimal per handbook; confirm` | 任务书 §5 授权 + 用户 Q3 确认 | 全部列入 `pending-types.md` |
+| D-3 | `core/contract/speech.ts` 内含 `isSanitizedText` / `markSanitized` / WeakSet 运行态 | 手册把该函数声明在 speech.ts 且要求「WeakSet miss → false」严格语义（S-06 / D43）；WeakSet 是 brand 契约的一部分 | 作为「类型即契约」受控实现留在契约文件；其余契约文件不含实现 |
+| D-4 | 补充文件：`core/id-factory.ts`、`core/runtime.ts`、`core/scheduler/frame-channel-impl.ts`（FrameChannel 实现位置）、`core/migrate/contract-registry-impl.ts`（ContractRegistry 实现位置）、`core/contract/entry-points.ts` 内含 `SampledValidator` 与 `__validateAt_count` 埋点 | 手册 4.1 目录为「至少包含」；埋点为 A02 证据要求 | 已记录 |
+| D-5 | compose 返回 bundle 增加 `inputBus` 与 `feedback` 字段 | 手册 4.2 片段未列，但 §8.2 e2e 第 1 步要求 `InputBus.inject` 可达、A14/A16 断言需观察 FeedbackChannel | 补充字段；不改变既有字段语义 |
+| D-6 | compose 增加 `cognition.mount(...)` 调用（await） | Cognition 契约要求 mount 生命周期；手册 4.2 片段未展示 | 在 pipeline 创建前调用；失败即 compose 失败 |
+| D-7 | dispose 链不含 `cognition.dispose()` 与 `scheduler.dispose()`（严格按手册步骤表） | 禁止改 dispose 顺序 | cognition 为宿主注入对象，由宿主（main.ts 等）处置；scheduler 的时钟订阅由 `clock.frameSource.stop()`（clock 步）清空 tick 监听兜底，`scheduler.dispose()` 保留供宿主显式调用 |
+| D-8 | 帧循环启动方：`scheduler.attachTrackingSource` 触发 `clock.frameSource.start()` | 手册未指定谁启动 FrameSource；不启动则体感最小链路无法运行 | 骨架行为；已注释 |
+| D-9 | `consumeIterator` 在迭代器抛错时丢弃已收 outputs（整批失败） | 附件 A 3.8 规则 5「整批失败，不产 signal」优先于 4.4 示意片段（示意代码无条件 push buf） | 规则 5 实现；示意片段按附录 C「不作为最终实现」处理 |
+| D-10 | `SpeechSessionStore.onRelease` 的 reason→state 映射（completed/feedback_done→done；feedback_error→failed；其余→interrupted）为骨架最小约定 | 手册只写死 feedback 映射表，未给 arbiter release 侧映射 | 列入待确认清单 |
+| D-11 | 默认仲裁策略取值：`channelOf` = speech ? "speech" : "motion"；`shouldInterrupt` = 高优先级且当前可中断；`isReleasable` = true | 手册给接口未给默认策略行为 | minimal，列入待确认清单 |
+| D-12 | `InputBus.inject/injectSnapshot` 对缺省 `contractVersion` 的输入按当前契约版本补齐后再校验 | §8.2 e2e 第 1 步 `InputBus.inject({kind:"user_message",text:"hi"})` 无版本字段 | 实现侧补齐；显式传坏版本仍会被拒绝（有测试） |
+| D-13 | `createDefaultFusionStage` 为无行为最小实现；`SpatialIntent` 不做运动学映射（axes 恒 0） | 任务书 2.2 明确不实现真实体感行为；插槽语义零变更 | 列入待确认清单 |
+| D-14 | 本地验证：依赖经用户手动安装后，用 node_modules 内 tsc/vitest/tsx 直跑（不经 pnpm 命令）；pnpm 脚本保留在 package.json 供正常环境使用 | 本机 pnpm 网络栈 10013 且沙箱内子进程无网络；npm install 可用（生成 package-lock.json） | 已向用户说明；`verify.cmd` 一键复验 |
+| D-15 | `Scheduler.dispose()` 未进入 compose dispose 链（见 D-7），由 clock 步兜底；`SampledValidator` 实例随 composition 闭包存活 | 手册 dispose 表无 scheduler 步 | 已记录 |
+| D-16 | 测试统一使用自写 `waitForTruthy` 真值轮询助手，不使用 `vi.waitFor` | vitest 的 `vi.waitFor` 语义是「等到回调不抛异常」而非「等到返回真值」，会瞬间通过造成断言提前 | tests/helpers/fixtures.ts |
+| D-17 | A09 测试使用原生 Cognition 直接返回可控 AsyncIterable | 经 mock cognition 的 toIterable 包装后，pipeline 的 `return()` 落在悬停中的外层 async generator 上，其 return 完成信号需内部 await 结算才被处理，导致观察不到 return 调用；手册已知局限 4 亦指出取消依赖适配器正确实现 return() | 测试注释已说明 |
+| D-18 | A07 基准「慢回调阻塞」窗口 20ms、判定阈值 0.8×（手册未规定测量参数） | 5ms 窗口在繁忙机器上计时抖动会造成误报 | 仅证据脚本参数，非契约 |
+| D-19 | 交付目录含 `verify.cmd`（本地一键复验）与 `package-lock.json`（npm 安装产物） | 本机 pnpm 无法联网安装；npm 路径的锁文件随交付保留，CI 模板仍用 pnpm | 已记录 |

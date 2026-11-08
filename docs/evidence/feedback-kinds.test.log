@@ -1,0 +1,4 @@
+Genesis-1 evidence: feedback-kinds.test
+result: local pass
+CI: pending / 待 CI
+signal_error releases; renderer_error logger+bus only

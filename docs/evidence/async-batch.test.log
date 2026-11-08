@@ -1,0 +1,4 @@
+Genesis-1 evidence: async-batch.test
+result: local pass
+CI: pending / 待 CI
+timeout/overlimit return(); throw fails batch; promise exempt
