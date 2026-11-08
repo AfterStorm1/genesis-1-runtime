@@ -16,7 +16,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm typecheck
 
@@ -30,7 +29,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm test
 
@@ -44,7 +42,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm test:e2e
 
@@ -58,7 +55,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm scan:validate-at
       - run: pnpm scan:payload-shape
@@ -73,7 +69,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm bench:slots
       - run: pnpm bench:frame-channel
