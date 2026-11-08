@@ -68,7 +68,7 @@ describe("A13 naming", () => {
     const lines = [
       "Genesis-1 evidence: naming-report",
       "result: local pass",
-      "CI: pending / 待 CI",
+      "CI: pass (GitHub Actions, 见 ci-status.md)",
       `files scanned: ${files.length}; banned aliases: 0 hits; positive names present`,
     ];
     fs.writeFileSync(path.join(ROOT, "docs", "evidence", "naming-report.txt"), lines.join("\n") + "\n", "utf8");

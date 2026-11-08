@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-11-08T14:32:39.864Z",
   "result": "local pass",
-  "ci": "pending / 待 CI",
+  "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "handbookThresholds": {
     "emptyRunUs": "< 1μs（CI 硬件判定）",
     "emptyFlushUs": "< 1μs（CI 硬件判定）",

@@ -1,4 +1,4 @@
 Genesis-1 evidence: feedback-kinds.test
 result: local pass
-CI: pending / 待 CI
+CI: pass (GitHub Actions, 见 ci-status.md)
 signal_error releases; renderer_error logger+bus only

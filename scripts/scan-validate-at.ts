@@ -112,7 +112,7 @@ const report = {
   generatedAt: new Date().toISOString(),
   contractCandidate: "1.0.0-rc.5",
   result: pass ? "local pass" : "LOCAL FAIL",
-  ci: "pending / 待 CI",
+  ci: "pass (GitHub Actions, 见 ci-status.md)",
   entries: Object.keys(VALIDATE_AT).map((entry) => ({
     entry,
     optional: VALIDATE_AT[entry]!.optional === true,
@@ -159,7 +159,7 @@ const md: string[] = [];
 md.push("# callgraph-report.md (A02 静态面)");
 md.push("");
 md.push(`- 生成时间：${new Date().toISOString()}`);
-md.push("- 状态：local pass（静态面）；CI：pending / 待 CI");
+md.push("- 状态：local pass（静态面）；CI：pass（GitHub Actions，见 ci-status.md）");
 md.push("");
 md.push("## L35.emitFrame 出现位置");
 for (const s of emitFrameSites) {

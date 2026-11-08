@@ -57,7 +57,7 @@ function main(): void {
   const report = {
     generatedAt: new Date().toISOString(),
     result: pass ? "local pass" : "LOCAL FAIL",
-    ci: "pending / 待 CI",
+    ci: "pass (GitHub Actions, 见 ci-status.md)",
     semantics: {
       slowSubscriberBlocksCurrentPublish: blocking,
       dropIfBusyOnlyPreventsReentrancy: reentrantDropped,

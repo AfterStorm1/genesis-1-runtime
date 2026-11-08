@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-11-08T14:32:40.603Z",
   "result": "local pass",
-  "ci": "pending / 待 CI",
+  "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "semantics": {
     "slowSubscriberBlocksCurrentPublish": true,
     "dropIfBusyOnlyPreventsReentrancy": true

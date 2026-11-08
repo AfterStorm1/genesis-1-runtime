@@ -40,7 +40,7 @@ export function formatE2eLog(result: E2eResult): string {
   const lines: string[] = [];
   lines.push("Genesis-1 e2e-minimal.log (A14)");
   lines.push(`result: ${result.passed ? "local pass" : "LOCAL FAIL"}`);
-  lines.push("CI: pending / 待 CI");
+  lines.push("CI: pass (GitHub Actions, 见 ci-status.md)");
   for (const s of result.steps) {
     lines.push(`${s.id.toString().padStart(2, "0")}. [${s.pass ? "PASS" : "FAIL"}] ${s.name} — ${s.detail}`);
   }

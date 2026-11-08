@@ -1,4 +1,4 @@
 Genesis-1 evidence: speech-cas.test
 result: local pass
-CI: pending / 待 CI
+CI: pass (GitHub Actions, 见 ci-status.md)
 mapping table; first-write-wins; dispose fallback

@@ -1,4 +1,4 @@
 Genesis-1 evidence: scheduler.test
 result: local pass
-CI: pending / 待 CI
+CI: pass (GitHub Actions, 见 ci-status.md)
 attach validates; frame chain; expression params clamped

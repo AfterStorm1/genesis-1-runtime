@@ -1,6 +1,6 @@
 Genesis-1 e2e-minimal.log (A14)
 result: local pass
-CI: pending / 待 CI
+CI: pass (GitHub Actions, 见 ci-status.md)
 01. [PASS] InputBus.inject 可达 Cognition.onInput — cognition.inputs=1
 02. [PASS] consumeIterator 逐 item validateAt — Cognition.onInput.output=2
 03. [PASS] pendingOutputs 含 emotion 与 speech — emotion=happy speech=echo: hi

@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-11-08T14:32:38.910Z",
   "result": "local pass",
-  "ci": "pending / 待 CI",
+  "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "sites": [
     {
       "entry": "ParameterRegistry.register",

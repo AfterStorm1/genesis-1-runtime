@@ -1,7 +1,7 @@
 # callgraph-report.md (A02 静态面)
 
 - 生成时间：2026-11-08T14:32:37.688Z
-- 状态：local pass（静态面）；CI：pending / 待 CI
+- 状态：local pass（静态面）；CI：pass (GitHub Actions, 见 ci-status.md)
 
 ## L35.emitFrame 出现位置
 - composition/composition-root.ts:248（via sampledValidator）

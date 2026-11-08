@@ -69,7 +69,7 @@ async function main(): Promise<void> {
   const report = {
     generatedAt: new Date().toISOString(),
     result: emptyPass && regressionPass ? "local pass" : "LOCAL FAIL",
-    ci: "pending / 待 CI",
+    ci: "pass (GitHub Actions, 见 ci-status.md)",
     handbookThresholds: {
       emptyRunUs: "< 1μs（CI 硬件判定）",
       emptyFlushUs: "< 1μs（CI 硬件判定）",

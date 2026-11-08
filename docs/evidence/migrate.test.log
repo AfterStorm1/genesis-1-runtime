@@ -1,4 +1,4 @@
 Genesis-1 evidence: migrate.test
 result: local pass
-CI: pending / 待 CI
+CI: pass (GitHub Actions, 见 ci-status.md)
 idempotent pure migrators; dev double-call deep equal

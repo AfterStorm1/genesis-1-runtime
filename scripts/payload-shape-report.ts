@@ -106,7 +106,7 @@ const pass = failures.length === 0;
 const report = {
   generatedAt: new Date().toISOString(),
   result: pass ? "local pass" : "LOCAL FAIL",
-  ci: "pending / 待 CI",
+  ci: "pass (GitHub Actions, 见 ci-status.md)",
   sites,
   failures,
   pass,

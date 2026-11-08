@@ -2,7 +2,7 @@
   "generatedAt": "2026-11-08T14:32:37.681Z",
   "contractCandidate": "1.0.0-rc.5",
   "result": "local pass",
-  "ci": "pending / 待 CI",
+  "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "entries": [
     {
       "entry": "L3.aggregate.output",

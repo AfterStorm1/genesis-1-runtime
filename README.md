@@ -37,8 +37,9 @@ pnpm demo             # 直接跑 main.ts（12 步 e2e + 写 log）
 > 本机验证记录：本会话交付时，本机 pnpm 的网络栈对 npm 仓库直连报 WSAEACCES(10013)
 > （与 Hyper-V 端口保留区间重叠有关），最终用 `npm install --registry=https://registry.npmjs.org`
 > 安装，并以 `verify.cmd`（依次执行 typecheck / 单测 / e2e / 扫描 / 基准 / demo，结果写入
-> `docs/evidence/verify.log`）完成本地复验，全部通过（local pass，CI 状态仍 pending）。
-> 正常环境直接用上方 pnpm 脚本即可，CI 模板见 `.github/workflows/ci.yml`。
+> `docs/evidence/verify.log`）完成本地复验，全部通过（local pass）。
+> GitHub Actions CI（.github/workflows/ci.yml，5 jobs）已全绿，见
+> `docs/evidence/ci-status.md`。正常环境直接用上方 pnpm 脚本即可。
 
 ## 换人格
 

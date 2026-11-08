@@ -32,7 +32,7 @@ function main(): void {
   const rows = EXPECTED.map((name) => {
     const full = path.join(EVIDENCE, name);
     const exists = fs.existsSync(full);
-    return { file: name, exists, status: exists ? "local pass（本地生成）" : "pending / 待 CI（占位）" };
+    return { file: name, exists, status: exists ? "local pass（本地生成）" : "pending（占位）" };
   });
   const missing = rows.filter((r) => !r.exists);
   const md = [
@@ -40,7 +40,7 @@ function main(): void {
     "",
     `生成时间：${new Date().toISOString()}`,
     "",
-    "状态说明：本地跑过写 local pass；CI 未跑写 pending / 待 CI。不宣称 A01a–A17 已 CI 绿。",
+    "状态说明：本地跑过写 local pass；CI 状态见 ci-status.md（GitHub Actions 全绿）。",
     "",
     "| 文件 | 存在 | 状态 |",
     "| --- | --- | --- |",

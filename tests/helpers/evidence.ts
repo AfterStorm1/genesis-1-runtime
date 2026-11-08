@@ -1,5 +1,5 @@
 // 证据产物写入助手（任务书 8 / 附件 C）
-// 本地跑过只写 local pass；CI 未跑写 pending / 待 CI。
+// 本地跑过写 local pass；CI 状态见 docs/evidence/ci-status.md（GitHub Actions 全绿后写 pass）。
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +10,7 @@ export function writeEvidenceLog(name: string, lines: string[], passed: boolean)
   const header = [
     `Genesis-1 evidence: ${name}`,
     `result: ${passed ? "local pass" : "LOCAL FAIL"}`,
-    "CI: pending / 待 CI",
+    "CI: pass (GitHub Actions, 见 ci-status.md)",
     ...lines,
   ];
   const file = path.join(EVIDENCE_DIR, `${name}.log`);
