@@ -1,4 +1,7 @@
-// 滚动内存历史（MemoryStore 最小实现）：轮数上限 / recall 形状 / 校验 / 清空
+// 滚动对话记忆（MemoryStore 最小实现）：recall 形状 / 持久化往返 / 校验 / 清空
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { createInMemoryHistoryStore } from "../../adapters/llm/in-memory-history-store";
 import { samplePersona } from "../helpers/fixtures";
@@ -25,14 +28,34 @@ describe("in-memory history store", () => {
     expect(typeof r?.items[0]?.ts).toBe("number");
   });
 
-  it("超出轮数上限时滚动淘汰最旧", async () => {
-    const store = createInMemoryHistoryStore({ maxTurns: 2 }); // 最多 4 条
+  it("recall 默认只取最近 maxTurns*2 条（提示词用），limit 可指定更多", async () => {
+    const store = createInMemoryHistoryStore({ maxTurns: 2 }); // 默认 4 条
     for (let i = 1; i <= 5; i++) {
       store.saveTurn("user", `u${i}`);
       store.saveTurn("assistant", `a${i}`);
     }
-    const r = await store.recall({ input: dummyInput, limit: 20 });
+    expect(store.list()).toHaveLength(10); // 内存保留全部（上限 500）
+    const r = await store.recall({ input: dummyInput });
     expect(r?.items.map((i) => i.content)).toEqual(["u4", "a4", "u5", "a5"]);
+    const rAll = await store.recall({ input: dummyInput, limit: 100 });
+    expect(rAll?.items).toHaveLength(10);
+  });
+
+  it("filePath 持久化：重启（新实例）后历史自动恢复", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "genesis-hist-"));
+    const file = path.join(dir, "Kaguya.jsonl");
+    const store1 = createInMemoryHistoryStore({ maxTurns: 10, filePath: file });
+    store1.saveTurn("user", "你叫什么");
+    store1.saveTurn("assistant", "Kaguya");
+    // 模拟重启：新实例读同一文件
+    const store2 = createInMemoryHistoryStore({ maxTurns: 10, filePath: file });
+    const r = await store2.recall({ input: dummyInput, limit: 10 });
+    expect(r?.items.map((i) => i.content)).toEqual(["你叫什么", "Kaguya"]);
+    // clear 同时清空文件
+    store2.clear();
+    const store3 = createInMemoryHistoryStore({ maxTurns: 10, filePath: file });
+    expect(store3.list()).toHaveLength(0);
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 
   it("save(event) 只接受合法形状；空白内容忽略", async () => {
@@ -54,6 +77,6 @@ describe("in-memory history store", () => {
   });
 
   it("写入 history-store 证据产物", () => {
-    writeEvidenceLog("history-store.test", ["rolling limit; recall shape; validation"], true);
+    writeEvidenceLog("history-store.test", ["recall shape; persistence roundtrip; validation"], true);
   });
 });

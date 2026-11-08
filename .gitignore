@@ -1,5 +1,6 @@
 node_modules/
 llm-config.cmd
+data/
 .pnpm-home/
 .pnpm-local/
 .pnpm-store/

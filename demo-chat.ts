@@ -30,6 +30,8 @@ export interface ChatRuntime {
   model: string;
   baseUrl: string;
   online: boolean;
+  /** 持久化记忆文件（JSONL） */
+  historyFile: string;
 }
 
 export interface ChatRuntimeOptions {
@@ -58,8 +60,11 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     (online ? (process.env.LLM_BASE_URL ?? "https://api.deepseek.com") : (process.env.OLLAMA_BASE_URL ?? "http://localhost:11434"));
   const envTurns = Number(process.env.CHAT_MAX_TURNS);
   const maxTurns = opts?.maxTurns ?? (Number.isFinite(envTurns) && envTurns > 0 ? envTurns : 10);
+  // 持久化记忆：每个角色一个 JSONL 文件，重启后自动续上（可用 CHAT_HISTORY_DIR 覆盖目录）
+  const historyDir = process.env.CHAT_HISTORY_DIR ?? path.join(process.cwd(), "data", "chat-history");
+  const historyFile = path.join(historyDir, `${persona.data.name}.jsonl`);
 
-  const history = createInMemoryHistoryStore({ maxTurns });
+  const history = createInMemoryHistoryStore({ maxTurns, filePath: historyFile });
   const rt = await compose({
     runtimeId: "rt:chat",
     personaId: "persona:chat",
@@ -71,7 +76,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     batchTimeoutMs: 120_000, // 本地 LLM（CPU 推理）延迟远高于默认 2s 批次超时
   });
 
-  return { rt, persona, history, model, baseUrl, online };
+  return { rt, persona, history, model, baseUrl, online, historyFile };
 }
 
 /** 发送一条用户消息；返回角色回复（无台词返回 null）。同时维护对话记忆。 */
@@ -106,11 +111,13 @@ export function sendUserMessage(
 
 /** 终端交互循环（/quit 退出） */
 export async function runChatLoop(chat: ChatRuntime): Promise<void> {
-  const { persona, model, baseUrl, online } = chat;
+  const { persona, model, baseUrl, online, historyFile } = chat;
   // eslint-disable-next-line no-console
   console.log(`[llm] mode=${online ? "online" : "local-ollama"} model=${model} baseUrl=${baseUrl}`);
   // eslint-disable-next-line no-console
   console.log(`[persona] loaded: ${persona.data.name}`);
+  // eslint-disable-next-line no-console
+  console.log(`[memory] ${chat.history.list().length} 条历史已载入，提示词取最近轮次；文件：${historyFile}`);
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const ask = (q: string): Promise<string> => new Promise((r) => rl.question(q, r));
 
