@@ -1,8 +1,8 @@
 # docs/evidence 索引
 
-生成时间：2026-11-08T14:32:41.290Z
+生成时间：2026-11-08T22:51:25.463Z
 
-状态说明：本地跑过写 local pass；CI 未跑写 pass (GitHub Actions, 见 ci-status.md)。不宣称 A01a–A17 已 CI 绿。
+状态说明：本地跑过写 local pass；CI 状态见 ci-status.md（GitHub Actions 全绿）。
 
 | 文件 | 存在 | 状态 |
 | --- | --- | --- |

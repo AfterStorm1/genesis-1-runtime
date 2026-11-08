@@ -13,6 +13,10 @@
 //   CHAT_SUMMARY_EVERY 每 N 个用户回合提炼一次长期记忆（默认 4；0 关闭）
 //   CHAT_MEMORY_MAX    长期记忆容量（默认 50）  CHAT_MEMORY_TTL_DAYS 遗忘天数（默认 30）
 //   CHAT_HISTORY_DIR   记忆文件目录（默认 data/chat-history）
+//   CHAT_WORLD_RULES   世界观/任务/对话偏向规则文件（.md/.txt 全文追加进 system 提示词）
+//   CHAT_EXTRA_SYSTEM  直接追加一行/一段 system 规则（与 CHAT_WORLD_RULES 合并）
+//   CHAT_TEMPERATURE   采样温度（默认 0.7；低=稳重，高=跳脱）
+import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { pathToFileURL } from "node:url";
@@ -90,13 +94,36 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
   const memory = createChatMemory({ turns: history, longTerm });
   const summarizer = createSummarizer({ baseUrl, model, apiKey });
 
+  // 世界观/规则注入：CHAT_WORLD_RULES（文件）+ CHAT_EXTRA_SYSTEM（文本）合并进 system 提示词
+  const worldRulesFile =
+    process.env.CHAT_WORLD_RULES !== undefined ? path.resolve(process.env.CHAT_WORLD_RULES) : undefined;
+  const worldRules =
+    worldRulesFile !== undefined && fs.existsSync(worldRulesFile)
+      ? fs.readFileSync(worldRulesFile, "utf8")
+      : undefined;
+  const extraSystemPrompt =
+    [
+      process.env.CHAT_EXTRA_SYSTEM?.trim() || undefined,
+      worldRules?.trim() ? `[世界观/规则]\n${worldRules.trim()}` : undefined,
+    ]
+      .filter((x): x is string => x !== undefined)
+      .join("\n\n") || undefined;
+  const temperature = Number(process.env.CHAT_TEMPERATURE);
+
   const rt = await compose({
     runtimeId: "rt:chat",
     personaId: "persona:chat",
     frameHz: 10,
     renderers: [createTextRenderer(), createMockSpeechRenderer()],
     parameters: [],
-    cognition: createOpenAiCompatibleCognition({ persona, model, baseUrl, apiKey }),
+    cognition: createOpenAiCompatibleCognition({
+      persona,
+      model,
+      baseUrl,
+      apiKey,
+      extraSystemPrompt,
+      temperature: Number.isFinite(temperature) ? temperature : undefined,
+    }),
     memory, // 对话记忆走契约预留的 MemoryStore → recall 路径
     batchTimeoutMs: 120_000, // 本地 LLM（CPU 推理）延迟远高于默认 2s 批次超时
   });

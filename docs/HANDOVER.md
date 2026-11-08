@@ -1,24 +1,33 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-08T17:26:02.906Z（北京时间 2026/11/9 01:26:02）
+> 自动生成时间：2026-11-08T22:51:27.512Z（北京时间 2026/11/9 06:51:27）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
 ## 自动快照
 
-- Node 版本：未知
+- Node 版本：v24.22.1
 - 代码规模：core 54 个文件 / adapters 12 / tests 30 / 全仓约 131 个文件（不含 node_modules）
 - 测试用例：约 160 个（unit + e2e，含 A01a–A17 对应断言）
 - 证据产物：18/18；CI 状态：CI 全绿
 
 ### 最近提交（git log -8）
 
-`（无法读取；在终端运行 pnpm handover 可补全）`
+`49f7e24 docs: handover pipeline (gen-handover.ts + docs/HANDOVER.md + verify step + daily refresh)`
+`fda9917 feat: long-term memory with forgetting (LLM summarization, capacity+TTL eviction, explicit /forget, archival rollback)`
+`f8959c9 feat: persistent chat memory (JSONL per persona, auto-reload on start)`
+`14a628c polish: persona mes_example few-shot in system prompt; richer Kaguya card; fix system prompt test`
+`3802605 refactor+feat: LLM chat consolidation (openai-compatible adapter, rolling memory, qwen3 default, persistent llm-config, architecture docs, better prompt/parsing)`
+`b1a0d60 docs: update repo url after account rename`
+`c6eda56 feat: openai-compatible LLM cognition (local ollama + online api) with chat demo`
+`0e25017 evidence: CI pass (GitHub Actions all green)`
 
 ### 本地 Ollama 模型
 
 ```
-（ollama 不可用或未安装）
+NAME          ID              SIZE      MODIFIED    
+qwen3:8b      500a1f067a9f    5.2 GB    6 hours ago    
+qwen2.5:7b    845dbda0ea48    4.7 GB    7 hours ago
 ```
 
 ---

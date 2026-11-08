@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-08T14:32:39.864Z",
-  "result": "local pass",
+  "generatedAt": "2026-11-08T22:51:23.939Z",
+  "result": "LOCAL FAIL",
   "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "handbookThresholds": {
     "emptyRunUs": "< 1μs（CI 硬件判定）",
@@ -10,44 +10,44 @@
   },
   "localAssertions": {
     "emptyUnder100us": true,
-    "regressionUnder1_5": true
+    "regressionUnder1_5": false
   },
   "results": [
     {
       "label": "hook-chain.run(empty)",
-      "nsPerOp": 40.929,
-      "usPerOp": 0.040929
+      "nsPerOp": 40.871,
+      "usPerOp": 0.040871000000000005
     },
     {
       "label": "source-hub.flush(empty)",
-      "nsPerOp": 23.9325,
-      "usPerOp": 0.023932500000000002
+      "nsPerOp": 19.5795,
+      "usPerOp": 0.0195795
     },
     {
       "label": "contract.validateAndMigrate(no-op)",
-      "nsPerOp": 12.936,
-      "usPerOp": 0.012936
+      "nsPerOp": 9.9415,
+      "usPerOp": 0.009941499999999999
     },
     {
       "label": "hook-chain.run(n=1)",
-      "nsPerOp": 704.642,
-      "usPerOp": 0.7046420000000001
+      "nsPerOp": 648.956,
+      "usPerOp": 0.648956
     },
     {
       "label": "hook-chain.run(n=2)",
-      "nsPerOp": 700.507,
-      "usPerOp": 0.700507
+      "nsPerOp": 633.93,
+      "usPerOp": 0.63393
     },
     {
       "label": "hook-chain.run(n=4)",
-      "nsPerOp": 894.725,
-      "usPerOp": 0.894725
+      "nsPerOp": 920.809,
+      "usPerOp": 0.920809
     },
     {
       "label": "hook-chain.run(n=8)",
-      "nsPerOp": 867.791,
-      "usPerOp": 0.8677910000000001
+      "nsPerOp": 1078.2,
+      "usPerOp": 1.0782
     }
   ],
-  "regression": 1.2315345948722898
+  "regression": 1.6614377554102282
 }

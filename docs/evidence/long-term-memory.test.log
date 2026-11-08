@@ -1,0 +1,4 @@
+Genesis-1 evidence: long-term-memory.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+capacity eviction; ttl archive; forget/rollback; persistence

@@ -1,0 +1,4 @@
+Genesis-1 evidence: llm-adapter.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+parse formats; history/memory injection; auth header; fallback

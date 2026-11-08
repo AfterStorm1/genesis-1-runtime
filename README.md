@@ -89,6 +89,7 @@ chat.cmd
 校验→聚合→仲裁→渲染→feedback 链路。适配器是「值级」改动：不触碰 core/contract/。
 
 > 全系统「查什么看哪里」索引见 [`docs/def/architecture.md`](docs/def/architecture.md)。
+> **人工配置（人格/世界观/任务/对话偏向/模型/记忆参数）全指南见 [`docs/def/manual-config-guide.md`](docs/def/manual-config-guide.md)。**
 
 ## 加 Renderer
 
