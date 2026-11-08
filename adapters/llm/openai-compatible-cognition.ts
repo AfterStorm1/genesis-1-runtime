@@ -81,6 +81,7 @@ export function buildSystemPrompt(persona: PersonaCardV3, extra?: string): strin
     p.data.personality ? `性格：${p.data.personality}` : "",
     p.data.scenario ? `场景：${p.data.scenario}` : "",
     p.data.first_mes ? `示例开场白：${p.data.first_mes}` : "",
+    p.data.mes_example ? `对话风格参考（模仿这种语气和长度）：\n${p.data.mes_example}` : "",
     `对话规则：`,
     `1. 像真人一样自然回答用户，先想清楚再开口；正常长度 1~3 句话，不要只说一两个词，也不要复述用户的话。`,
     `2. 回答前先输出一行情绪词：[EMOTION] calm（从 happy/sad/angry/neutral/surprised/calm 中选一个）。`,

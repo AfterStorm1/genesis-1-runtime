@@ -58,7 +58,7 @@ describe("llm adapter messages", () => {
   it("system 提示词包含人格卡字段", () => {
     const s = buildSystemPrompt(persona);
     expect(s).toContain("Kaguya");
-    expect(s).toContain("[SPEECH]");
+    expect(s).toContain("[EMOTION]");
   });
 
   it("记忆历史插入在 system 与当前输入之间；角色映射 assistant/user", () => {
