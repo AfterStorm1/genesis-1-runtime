@@ -54,9 +54,16 @@ node node_modules\tsx\dist\cli.mjs main.ts
 
 ## 接真实 LLM（本地 Ollama / 在线 API 双模式，值级扩展）
 
-- 适配器：`adapters/llm/openai-compatible-cognition.ts`（人格卡 system + 记忆历史 + 标记行格式解析）
-- 对话记忆：`adapters/llm/in-memory-history-store.ts`（滚动 N 轮，经契约预留的 MemoryStore→recall 注入）
+- 适配器：`adapters/llm/openai-compatible-cognition.ts`（人格卡 system + 记忆 + 标记行格式解析）
+- **对话记忆（三级）**：
+  - 短期轮次：`in-memory-history-store.ts`（JSONL 持久化，重启续上；提示词取最近 `CHAT_MAX_TURNS` 轮）
+  - **长期记忆：`long-term-memory.ts`（每 `CHAT_SUMMARY_EVERY` 轮用 LLM 自动提炼事实入库，容量/TTL/显式遗忘）**
+  - 组合注入：`chat-memory.ts`（一次 recall = 长期条目 + 最近轮次，经契约预留的 MemoryStore→recall 路径）
 - 聊天入口：**双击 `chat.cmd`**，或 `node node_modules\tsx\dist\cli.mjs demo-chat.ts`
+
+聊天中可用命令：`/记忆` 查看长期记忆；`/忘记 关键词` 显式遗忘（归档可回滚）；`/quit` 退出。
+相关环境变量：`CHAT_MAX_TURNS`（短期轮数）、`CHAT_SUMMARY_EVERY`（提炼频率，0 关闭）、
+`CHAT_MEMORY_MAX`（长期容量 50）、`CHAT_MEMORY_TTL_DAYS`（遗忘天数 30）、`CHAT_HISTORY_DIR`（记忆目录）。
 
 **本地模式（默认，无需任何配置）：**
 

@@ -25,3 +25,4 @@
 | D-18 | A07 基准「慢回调阻塞」窗口 20ms、判定阈值 0.8×（手册未规定测量参数） | 5ms 窗口在繁忙机器上计时抖动会造成误报 | 仅证据脚本参数，非契约 |
 | D-19 | 交付目录含 `verify.cmd`（本地一键复验）、`chat.cmd`（聊天入口）与 `package-lock.json`（npm 安装产物） | 本机 pnpm 无法联网安装；npm 路径的锁文件随交付保留，CI 模板仍用 pnpm | 已记录 |
 | D-20 | 对话功能（值级扩展）：`adapters/llm/openai-compatible-cognition.ts`（本地 Ollama / 在线 API 双模式，含标记行格式解析）、`adapters/llm/in-memory-history-store.ts`（对话记忆，经契约预留的 MemoryStore→recall 路径注入）、`demo-chat.ts`（导出 createChatRuntime/sendUserMessage/runChatLoop 供其他宿主复用） | 任务书 9.1「新增能力只加 adapters/」；全部不动 core/contract/ | 已记录；初始名 ollama-cognition.ts 已正名 |
+| D-21 | 三级对话记忆 + 遗忘机制（值级扩展）：`adapters/llm/long-term-memory.ts`（LLM 提炼/容量淘汰/TTL/显式遗忘/归档回滚）、`adapters/llm/chat-memory.ts`（组合 MemoryStore）、`adapters/llm/summarizer.ts`（复用 chatOnce 的摘要器）；长期条目以 `recall.items` 中 `role:"memory"` 传递，适配器并入 system 提示词 | RecallResult.role 为最小类型（string），未扩展契约 | 已记录 |

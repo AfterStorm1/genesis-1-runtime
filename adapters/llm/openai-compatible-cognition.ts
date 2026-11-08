@@ -96,17 +96,25 @@ export function buildSystemPrompt(persona: PersonaCardV3, extra?: string): strin
     .join("\n");
 }
 
-/** 组装消息：system → 记忆历史 → 当前输入（导出供测试） */
+/** 组装消息：system（含长期记忆块）→ 短期历史轮次 → 当前输入（导出供测试） */
 export function buildMessages(
   input: CognitionInput,
   persona: PersonaCardV3,
   extraSystemPrompt?: string,
 ): Array<{ role: string; content: string }> {
+  const recallItems = input.recall?.items ?? [];
+  // 长期记忆条目（role="memory"，由长期记忆库提供）并入 system 提示词
+  const memoryItems = recallItems.filter((i) => i.role === "memory");
+  // 短期历史轮次按对话顺序注入
+  const turnItems = recallItems.filter((i) => i.role !== "memory");
+  const memoryBlock =
+    memoryItems.length > 0
+      ? `\n\n[长期记忆——你们之间值得记住的事]\n${memoryItems.map((i) => `- ${i.content}`).join("\n")}`
+      : "";
   const messages: Array<{ role: string; content: string }> = [
-    { role: "system", content: buildSystemPrompt(persona, extraSystemPrompt) },
+    { role: "system", content: buildSystemPrompt(persona, extraSystemPrompt) + memoryBlock },
   ];
-  // 记忆（多轮上下文）：pipeline 已把 MemoryStore.recall 结果放进 input.recall
-  for (const item of input.recall?.items ?? []) {
+  for (const item of turnItems) {
     messages.push({
       role: item.role === "assistant" ? "assistant" : "user",
       content: item.content,
@@ -122,6 +130,38 @@ export function buildMessages(
     messages.push({ role: "user", content: `[反馈] ${input.feedback.kind}` });
   }
   return messages;
+}
+
+export interface ChatOnceOptions {
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+  messages: Array<{ role: string; content: string }>;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+/** 一次 OpenAI 兼容对话请求（适配器与摘要器共用），返回模型文本；HTTP 错误抛异常 */
+export async function chatOnce(opts: ChatOnceOptions): Promise<string> {
+  const res = await fetch(`${opts.baseUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(opts.apiKey !== undefined ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
+    },
+    body: JSON.stringify({
+      model: opts.model,
+      messages: opts.messages,
+      temperature: opts.temperature ?? 0.7,
+      max_tokens: opts.maxTokens ?? 512,
+      stream: false,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`llm_http_${res.status}`);
+  }
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  return data.choices?.[0]?.message?.content ?? "";
 }
 
 export function createOpenAiCompatibleCognition(
@@ -145,26 +185,19 @@ export function createOpenAiCompatibleCognition(
     async *onInput(input: CognitionInput): AsyncGenerator<CognitionOutput> {
       const messages = buildMessages(input, opts.persona, extraSystemPrompt);
       logger?.info("llm.request", { model, baseUrl, turns: messages.length });
-      const res = await fetch(`${baseUrl}/v1/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(apiKey !== undefined ? { Authorization: `Bearer ${apiKey}` } : {}),
-        },
-        body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: false }),
-      });
-      if (!res.ok) {
-        logger?.error("llm.error", { status: res.status });
+      let raw: string;
+      try {
+        raw = await chatOnce({ baseUrl, model, apiKey, messages, temperature, maxTokens });
+      } catch (err) {
+        logger?.error("llm.error", { err: err instanceof Error ? err.message : String(err) });
         // 降级台词：保证会话不静默（骨架行为）
         yield {
           contractVersion: COGNITION_CONTRACT_VERSION,
           kind: "speech",
-          speech: { text: `（LLM 调用失败：HTTP ${res.status}）`, interruptible: true },
+          speech: { text: `（LLM 调用失败）`, interruptible: true },
         };
         return;
       }
-      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      const raw = data.choices?.[0]?.message?.content ?? "";
       const reply = parseReply(raw);
       const emotion = reply.emotion ?? "neutral";
       const rawIntensity = Number(reply.intensity);

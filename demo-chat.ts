@@ -9,7 +9,10 @@
 //   —— 在线模式（设置 LLM_API_KEY 后自动切换）——
 //   LLM_API_KEY       必填               LLM_BASE_URL 默认 https://api.deepseek.com
 //   LLM_MODEL         默认 deepseek-chat
-//   CHAT_MAX_TURNS    记忆保留轮数（默认 10）
+//   CHAT_MAX_TURNS    短期提示词轮数（默认 10）
+//   CHAT_SUMMARY_EVERY 每 N 个用户回合提炼一次长期记忆（默认 4；0 关闭）
+//   CHAT_MEMORY_MAX    长期记忆容量（默认 50）  CHAT_MEMORY_TTL_DAYS 遗忘天数（默认 30）
+//   CHAT_HISTORY_DIR   记忆文件目录（默认 data/chat-history）
 import path from "node:path";
 import readline from "node:readline";
 import { pathToFileURL } from "node:url";
@@ -19,6 +22,11 @@ import { loadPersona } from "./layers/l1-persona/persona-loader";
 import { createOpenAiCompatibleCognition } from "./adapters/llm/openai-compatible-cognition";
 import { createInMemoryHistoryStore } from "./adapters/llm/in-memory-history-store";
 import type { InMemoryHistoryStore } from "./adapters/llm/in-memory-history-store";
+import { createLongTermMemory } from "./adapters/llm/long-term-memory";
+import type { LongTermMemory } from "./adapters/llm/long-term-memory";
+import { createChatMemory } from "./adapters/llm/chat-memory";
+import { createSummarizer } from "./adapters/llm/summarizer";
+import type { Summarizer } from "./adapters/llm/summarizer";
 import { createMockSpeechRenderer } from "./adapters/renderers/mock-speech-renderer";
 import { createTextRenderer } from "./adapters/renderers/text-renderer";
 import type { PersonaCardV3 } from "./core/contract/persona";
@@ -26,12 +34,18 @@ import type { PersonaCardV3 } from "./core/contract/persona";
 export interface ChatRuntime {
   rt: RuntimeBundle;
   persona: PersonaCardV3;
+  /** 短期轮次存储（逐字历史） */
   history: InMemoryHistoryStore;
+  /** 长期记忆库（带遗忘机制） */
+  longTerm: LongTermMemory;
+  /** 摘要器（把轮次提炼成长记忆） */
+  summarizer: Summarizer;
   model: string;
   baseUrl: string;
   online: boolean;
-  /** 持久化记忆文件（JSONL） */
+  /** 持久化文件（JSONL） */
   historyFile: string;
+  longTermFile: string;
 }
 
 export interface ChatRuntimeOptions {
@@ -65,6 +79,17 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
   const historyFile = path.join(historyDir, `${persona.data.name}.jsonl`);
 
   const history = createInMemoryHistoryStore({ maxTurns, filePath: historyFile });
+  // 长期记忆库：容量 50、TTL 30 天、淘汰只归档不删除（带遗忘机制）
+  const longTermFile = path.join(historyDir, `${persona.data.name}.longterm.jsonl`);
+  const longTerm = createLongTermMemory({
+    filePath: longTermFile,
+    maxEntries: Number(process.env.CHAT_MEMORY_MAX ?? 50) || 50,
+    ttlDays: Number(process.env.CHAT_MEMORY_TTL_DAYS ?? 30),
+  });
+  // 组合记忆：pipeline 的 recall 一次返回「长期记忆条目 + 最近轮次」
+  const memory = createChatMemory({ turns: history, longTerm });
+  const summarizer = createSummarizer({ baseUrl, model, apiKey });
+
   const rt = await compose({
     runtimeId: "rt:chat",
     personaId: "persona:chat",
@@ -72,11 +97,11 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     renderers: [createTextRenderer(), createMockSpeechRenderer()],
     parameters: [],
     cognition: createOpenAiCompatibleCognition({ persona, model, baseUrl, apiKey }),
-    memory: history, // 对话记忆走契约预留的 MemoryStore → recall 路径
+    memory, // 对话记忆走契约预留的 MemoryStore → recall 路径
     batchTimeoutMs: 120_000, // 本地 LLM（CPU 推理）延迟远高于默认 2s 批次超时
   });
 
-  return { rt, persona, history, model, baseUrl, online, historyFile };
+  return { rt, persona, history, longTerm, summarizer, model, baseUrl, online, historyFile, longTermFile };
 }
 
 /** 发送一条用户消息；返回角色回复（无台词返回 null）。同时维护对话记忆。 */
@@ -109,26 +134,57 @@ export function sendUserMessage(
   });
 }
 
-/** 终端交互循环（/quit 退出） */
+/** 终端交互循环（/quit 退出；/忘记 关键词 遗忘；/记忆 查看长期记忆） */
 export async function runChatLoop(chat: ChatRuntime): Promise<void> {
-  const { persona, model, baseUrl, online, historyFile } = chat;
+  const { persona, model, baseUrl, online, historyFile, longTerm } = chat;
+  const summaryEvery = Number(process.env.CHAT_SUMMARY_EVERY ?? 4) || 0; // 每 N 个用户回合提炼一次；0 关闭
   // eslint-disable-next-line no-console
   console.log(`[llm] mode=${online ? "online" : "local-ollama"} model=${model} baseUrl=${baseUrl}`);
   // eslint-disable-next-line no-console
   console.log(`[persona] loaded: ${persona.data.name}`);
+  const activeLong = longTerm.list().filter((e) => e.archived !== true).length;
   // eslint-disable-next-line no-console
-  console.log(`[memory] ${chat.history.list().length} 条历史已载入，提示词取最近轮次；文件：${historyFile}`);
+  console.log(
+    `[memory] 短期历史 ${chat.history.list().length} 条 + 长期记忆 ${activeLong} 条；文件：${historyFile}`,
+  );
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const ask = (q: string): Promise<string> => new Promise((r) => rl.question(q, r));
 
   // eslint-disable-next-line no-console
-  console.log(`\n与「${persona.data.name}」聊天开始（输入 /quit 退出；历史保留最近 ${chat.history.list().length === 0 ? "10" : "N"} 轮）\n`);
+  console.log(
+    `\n与「${persona.data.name}」聊天开始（/quit 退出 / 记忆 查看 / 忘记 关键词 遗忘）\n`,
+  );
+
+  let userTurns = 0;
 
   for (;;) {
     const line = await ask("你 > ");
-    if (line.trim() === "/quit" || line.trim() === "/exit") break;
-    if (line.trim() === "") continue;
-    const { text, emotion } = await sendUserMessage(chat, line);
+    const trimmed = line.trim();
+    if (trimmed === "/quit" || trimmed === "/exit") break;
+    if (trimmed === "") continue;
+
+    // —— 显式遗忘命令（遗忘机制入口 3）——
+    if (trimmed.startsWith("/忘记 ")) {
+      const n = longTerm.forget(trimmed.slice("/忘记 ".length));
+      // eslint-disable-next-line no-console
+      console.log(`已遗忘 ${n} 条相关记忆（归档可回滚：longTerm.restoreArchived()）`);
+      continue;
+    }
+    if (trimmed === "/记忆") {
+      const items = longTerm.list().filter((e) => e.archived !== true);
+      if (items.length === 0) {
+        // eslint-disable-next-line no-console
+        console.log("（还没有长期记忆。多聊几轮，我会自动提炼。）");
+      } else {
+        for (const e of items) {
+          // eslint-disable-next-line no-console
+          console.log(`  · [重要度${e.importance}] ${e.text}`);
+        }
+      }
+      continue;
+    }
+
+    const { text, emotion } = await sendUserMessage(chat, trimmed);
     if (text === null) {
       // eslint-disable-next-line no-console
       console.log(`${persona.data.name} > （超时或本句只有情绪无台词）`);
@@ -136,12 +192,34 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       // eslint-disable-next-line no-console
       console.log(`${persona.data.name} (${emotion}) > ${text}`);
     }
+
+    // —— 长期记忆提炼（每 summaryEvery 个用户回合一次）——
+    userTurns += 1;
+    if (summaryEvery > 0 && userTurns % summaryEvery === 0) {
+      // eslint-disable-next-line no-console
+      console.log("（正在提炼长期记忆…本地模型这一步会慢一点）");
+      const recent = chat.history
+        .list()
+        .slice(-12)
+        .map((i) => `${i.role === "user" ? "用户" : persona.data.name}：${i.content}`)
+        .join("\n");
+      try {
+        const items = await chat.summarizer.summarize(recent);
+        for (const t of items) longTerm.add(t);
+        const nowActive = longTerm.list().filter((e) => e.archived !== true).length;
+        // eslint-disable-next-line no-console
+        console.log(`[memory] 新增 ${items.length} 条长期记忆（现存 ${nowActive} 条）`);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.log(`[memory] 提炼失败：${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
   }
 
   rl.close();
   await chat.rt.dispose();
   // eslint-disable-next-line no-console
-  console.log("已退出。");
+  console.log("已退出。长期记忆与历史已保存。");
 }
 
 const isMain =

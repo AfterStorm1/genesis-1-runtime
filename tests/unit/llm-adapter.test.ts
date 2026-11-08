@@ -6,6 +6,7 @@ import {
   createOpenAiCompatibleCognition,
   parseReply,
 } from "../../adapters/llm/openai-compatible-cognition";
+import { parseMemoryLines } from "../../adapters/llm/summarizer";
 import { samplePersona } from "../helpers/fixtures";
 import { COGNITION_CONTRACT_VERSION } from "../../core/contract/cognition";
 import type { CognitionInput, CognitionOutput } from "../../core/contract/cognition";
@@ -123,7 +124,32 @@ describe("llm adapter messages", () => {
     expect(outputs[0]!.kind).toBe("speech");
   });
 
+  it("长期记忆条目（role=memory）注入 system 提示词，不进入对话轮次", () => {
+    const msgs = buildMessages(
+      userInput("你好", {
+        items: [
+          { role: "memory", content: "用户叫小明" },
+          { role: "user", content: "早" },
+        ],
+      }),
+      persona,
+    );
+    expect(msgs.map((m) => m.role)).toEqual(["system", "user", "user"]);
+    expect(msgs[0]!.content).toContain("[长期记忆");
+    expect(msgs[0]!.content).toContain("用户叫小明");
+    expect(msgs[1]!.content).toBe("早");
+    expect(msgs[0]!.content).not.toContain("用户叫小明\n- 用户叫小明"); // 不重复
+  });
+
+  it("摘要器输出解析：每行一条、去前缀、忽略空行与「无」", () => {
+    expect(parseMemoryLines("- 用户喜欢咖啡\n* 约定周三见面\n\n无")).toEqual([
+      "用户喜欢咖啡",
+      "约定周三见面",
+    ]);
+    expect(parseMemoryLines("没有")).toEqual([]);
+  });
+
   it("写入 llm-adapter 证据产物", () => {
-    writeEvidenceLog("llm-adapter.test", ["parse formats; history injection; auth header; fallback"], true);
+    writeEvidenceLog("llm-adapter.test", ["parse formats; history/memory injection; auth header; fallback"], true);
   });
 });

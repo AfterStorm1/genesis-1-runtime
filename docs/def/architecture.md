@@ -89,12 +89,17 @@ runtime/
    输出 `contractVersion = COGNITION_CONTRACT_VERSION` 的 emotion/speech/tool_call/state_update；
 3. 通过 `RuntimeConfig.cognition` 或宿主装配注入；pipeline 会自动校验与聚合。
 
-### 4.2 给聊天加长期记忆（今天用滚动内存，明天可换向量库）
+### 4.2 对话记忆（三级体系，全在 adapters/llm/，值级）
 
-1. 实现 `MemoryStore`（`core/contract/memory.ts`）；
-2. 经 `RuntimeConfig.memory` 注入——pipeline 自动在 `handleInput` 里带超时调用 `recall`
-   并把结果放进 `input.recall`（超时 `memoryRecallTimeoutMs` 默认 50ms）；
-3. 适配器侧消费 `input.recall.items`（参考 openai-compatible-cognition 的 buildMessages）。
+| 层 | 实现 | 行为 | 遗忘机制 |
+|---|---|---|---|
+| 短期轮次 | `in-memory-history-store.ts` | 逐字历史 JSONL 持久化；提示词取最近 N 轮 | 滑出提示词但文件保留 |
+| 长期记忆 | `long-term-memory.ts` | LLM 每 N 轮提炼事实入库；注入 system 提示词 | 容量上限（评分淘汰）+ TTL（30 天未用且不重要）+ `/忘记` 显式遗忘；**只归档不删除，可回滚** |
+| 组合 | `chat-memory.ts` | 实现 MemoryStore：一次 recall = 长期条目（role="memory"）+ 最近轮次 | 经契约预留路径注入，无需改契约 |
+
+接入方式：`RuntimeConfig.memory = createChatMemory({ turns, longTerm })`——
+pipeline 自动在 `handleInput` 里带超时调用 `recall` 并把结果放进 `input.recall`；
+适配器侧 `buildMessages` 把 role="memory" 条目并入 system、轮次按序注入。
 
 ### 4.3 给角色加一个工具（如查天气）
 
