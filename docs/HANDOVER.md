@@ -1,33 +1,33 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-08T22:51:27.512Z（北京时间 2026/11/9 06:51:27）
+> 自动生成时间：2026-11-09T20:02:31.771Z（北京时间 2026/11/10 04:02:31）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
 ## 自动快照
 
 - Node 版本：v24.22.1
-- 代码规模：core 54 个文件 / adapters 12 / tests 30 / 全仓约 131 个文件（不含 node_modules）
+- 代码规模：core 54 个文件 / adapters 12 / tests 30 / 全仓约 135 个文件（不含 node_modules）
 - 测试用例：约 160 个（unit + e2e，含 A01a–A17 对应断言）
 - 证据产物：18/18；CI 状态：CI 全绿
 
 ### 最近提交（git log -8）
 
+`a17c127 fix: ship real config/world/rules.md; warn when CHAT_WORLD_RULES file missing`
+`091be89 feat+docs: world-rules/extra-system/temperature env knobs; manual-config-guide covering all human-editable settings`
 `49f7e24 docs: handover pipeline (gen-handover.ts + docs/HANDOVER.md + verify step + daily refresh)`
 `fda9917 feat: long-term memory with forgetting (LLM summarization, capacity+TTL eviction, explicit /forget, archival rollback)`
 `f8959c9 feat: persistent chat memory (JSONL per persona, auto-reload on start)`
 `14a628c polish: persona mes_example few-shot in system prompt; richer Kaguya card; fix system prompt test`
 `3802605 refactor+feat: LLM chat consolidation (openai-compatible adapter, rolling memory, qwen3 default, persistent llm-config, architecture docs, better prompt/parsing)`
 `b1a0d60 docs: update repo url after account rename`
-`c6eda56 feat: openai-compatible LLM cognition (local ollama + online api) with chat demo`
-`0e25017 evidence: CI pass (GitHub Actions all green)`
 
 ### 本地 Ollama 模型
 
 ```
-NAME          ID              SIZE      MODIFIED    
-qwen3:8b      500a1f067a9f    5.2 GB    6 hours ago    
-qwen2.5:7b    845dbda0ea48    4.7 GB    7 hours ago
+qwen2.5:7b
+qwen3:8b
+（来源：磁盘 manifest；daemon 当前未运行）
 ```
 
 ---
@@ -57,7 +57,9 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 4. 在线 LLM：`llm-config.cmd`（已被 git 忽略）保存 key，模板见 `llm-config.example.cmd`；
    环境变量优先级：LLM_API_KEY 存在即在线（LLM_BASE_URL/LLM_MODEL），否则本地（OLLAMA_*）。
 5. 聊天数据：`data/chat-history/`（每角色一个 .jsonl + .longterm.jsonl），已被 git 忽略。
-6. 一键入口：`chat.cmd`（聊天）、`verify.cmd`（本地 9 步复验）。
+6. 一键入口：`chat.cmd`（聊天）、`verify.cmd`（本地 10 步复验，含刷新 HANDOVER.md）。
+7. 人工配置：人格/世界观/任务/对话偏向/模型/记忆参数全部入口见 `docs/def/manual-config-guide.md`；
+   新增可配项：CHAT_WORLD_RULES（规则文件）、CHAT_EXTRA_SYSTEM（追加规则）、CHAT_TEMPERATURE。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 

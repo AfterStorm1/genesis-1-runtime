@@ -58,9 +58,14 @@ function evidenceStatus(): string[] {
 }
 
 function main(): void {
-  const gitLog = tryExec("git", ["log", "--oneline", "-8"]) ?? "（无法读取；在终端运行 pnpm handover 可补全）";
-  const nodeVer = tryExec("node", ["--version"]) ?? "未知";
-  const models = tryExec("ollama", ["list"]) ?? "（ollama 不可用或未安装）";
+  // 允许外部注入（沙箱/受限环境下 node 子进程管道被禁时，由调用方经环境变量提供真实值）
+  const gitLog =
+    process.env.GEN_HANDOVER_GIT_LOG ??
+    tryExec("git", ["log", "--oneline", "-8"]) ??
+    "（无法读取；在终端运行 pnpm handover 可补全）";
+  const nodeVer = process.env.GEN_HANDOVER_NODE_VER ?? tryExec("node", ["--version"]) ?? "未知";
+  const models =
+    process.env.GEN_HANDOVER_OLLAMA ?? tryExec("ollama", ["list"]) ?? "（ollama 不可用或未安装）";
 
   const lines: string[] = [];
   lines.push("# HANDOVER — Genesis-1 交接文档");
