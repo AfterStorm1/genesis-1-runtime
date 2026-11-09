@@ -97,10 +97,15 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
   // 世界观/规则注入：CHAT_WORLD_RULES（文件）+ CHAT_EXTRA_SYSTEM（文本）合并进 system 提示词
   const worldRulesFile =
     process.env.CHAT_WORLD_RULES !== undefined ? path.resolve(process.env.CHAT_WORLD_RULES) : undefined;
-  const worldRules =
-    worldRulesFile !== undefined && fs.existsSync(worldRulesFile)
-      ? fs.readFileSync(worldRulesFile, "utf8")
-      : undefined;
+  let worldRules: string | undefined;
+  if (worldRulesFile !== undefined) {
+    if (fs.existsSync(worldRulesFile)) {
+      worldRules = fs.readFileSync(worldRulesFile, "utf8");
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn(`[config] CHAT_WORLD_RULES 指向的文件不存在，已忽略：${worldRulesFile}`);
+    }
+  }
   const extraSystemPrompt =
     [
       process.env.CHAT_EXTRA_SYSTEM?.trim() || undefined,
