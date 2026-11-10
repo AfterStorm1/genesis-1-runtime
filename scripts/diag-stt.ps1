@@ -29,8 +29,18 @@ try {
   $r.BabbleTimeout = [TimeSpan]::FromSeconds(6)
   $r.EndSilenceTimeout = [TimeSpan]::FromSeconds(1.5)
   $r.LoadGrammar([System.Speech.Recognition.DictationGrammar]::new())
+  Write-Host "  开始听…（现在请说话）"
+  $sw = [Diagnostics.Stopwatch]::StartNew()
   $res = $r.Recognize()
-  if ($res) { Write-Host ("  识别结果：" + $res.Text) } else { Write-Host "  没听清（超时），麦克风可能有声音但识别不到，检查输入音量" }
+  $sw.Stop()
+  if ($res) {
+    Write-Host ("  识别结果：" + $res.Text)
+  } elseif ($sw.Elapsed.TotalSeconds -lt 2) {
+    Write-Host "  立即返回且无结果：引擎拒绝识别（检查麦克风权限与默认设备）"
+  } else {
+    Write-Host ("  静默超时，没有听到语音（等了 " + [int]$sw.Elapsed.TotalSeconds + " 秒；检查麦克风音量）")
+  }
+  $r.Dispose()
 } catch {
   Write-Host ("  失败：" + $_.Exception.Message)
   exit 1
