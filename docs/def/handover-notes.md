@@ -46,6 +46,9 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 15. 人格去工作场景依赖：规则文件顶部「场景框架」元指令 + 「生活面」节（住处=旧京老城区小公寓、
     旧书铺老板/隔壁老奶奶两个工作外关系，已填）+ 「非工作场景」规则节；工作规则降入「可选场景」节。
     验收：`scripts/check-descope.ts`（V1-V3，报告 docs/evidence/persona-descope/）；V4 回归 = weekly-check。
+16. QQ 群机器人宿主（值级）：`hosts/qq-host/qq-bot.ts`（OneBot 11 正向 WS，适配 NapCatQQ；每群独立运行时
+    记忆隔离、@或触发词应答、冷却防刷、群聊关 TTS/流式）；`qq-chat.cmd` 启动；ChatRuntimeOptions 增加
+    historyDir/tts/stream/emotion 覆盖。⚠️ 非官方协议有封号风险，建议专用小号。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 

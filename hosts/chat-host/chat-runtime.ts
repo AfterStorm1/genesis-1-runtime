@@ -65,6 +65,14 @@ export interface ChatRuntimeOptions {
   baseUrl?: string;
   apiKey?: string;
   maxTurns?: number;
+  /** 覆盖记忆目录（QQ 宿主按群隔离用） */
+  historyDir?: string;
+  /** 覆盖流式开关（QQ 宿主关） */
+  stream?: boolean;
+  /** 覆盖 TTS 开关（QQ 宿主关） */
+  tts?: boolean;
+  /** 覆盖情绪状态机开关 */
+  emotion?: boolean;
 }
 
 /** 组装聊天运行时（LLM 模式自动判定：有 apiKey → 在线，否则本地 Ollama） */
@@ -78,9 +86,13 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
   const model = opts?.model ?? env.model;
   const baseUrl = opts?.baseUrl ?? env.baseUrl;
   const maxTurns = opts?.maxTurns ?? env.maxTurns;
+  const historyDir = opts?.historyDir ?? env.historyDir;
+  const streamOutput = opts?.stream ?? env.stream;
+  const ttsOn = opts?.tts ?? env.tts;
+  const emotionOn = opts?.emotion ?? env.emotion;
 
   // 三级记忆（短/长/感受）一次装配
-  const mem = assembleChatMemory(persona.data.name, env.historyDir, {
+  const mem = assembleChatMemory(persona.data.name, historyDir, {
     maxTurns,
     memoryMax: env.memoryMax,
     memoryTtlDays: env.memoryTtlDays,
@@ -115,13 +127,13 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
 
   // 安全钩子（最高优先级终止规则）+ 情绪注记钩子
   const guard = createTerminationHook();
-  const emotion = env.emotion ? createEmotionStateMachine() : undefined;
+  const emotion = emotionOn ? createEmotionStateMachine() : undefined;
 
   // 渲染器：流式文本（默认）+ TTS 语音（默认 SAPI）
-  const textRenderer = env.stream
+  const textRenderer = streamOutput
     ? createStreamingTextRenderer({ charDelayMs: env.charDelay, sentenceDelayMs: env.sentenceDelay })
     : createTextRenderer();
-  const speechRenderer = env.tts
+  const speechRenderer = ttsOn
     ? createTtsSpeechRenderer({ speaker: createSapiSpeaker({ rate: env.ttsRate }) })
     : createMockSpeechRenderer();
 
@@ -141,7 +153,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
       apiKey,
       extraSystemPrompt,
       temperature: env.temperature,
-      quiet: env.stream, // 流式模式下静音 llm.request 日志，避免串行干扰打字机输出
+      quiet: streamOutput, // 流式模式下静音 llm.request 日志，避免串行干扰打字机输出
     }),
     memory: mem.memory, // 对话记忆走契约预留的 MemoryStore → recall 路径
     hooks: [
@@ -151,7 +163,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     batchTimeoutMs: 120_000, // 本地 LLM（CPU 推理）延迟远高于默认 2s 批次超时
   });
 
-  const whenRendered = env.stream
+  const whenRendered = streamOutput
     ? (): Promise<void> => (textRenderer as StreamingTextRenderer).whenIdle()
     : undefined;
 
@@ -168,7 +180,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     online,
     historyFile: mem.historyFile,
     longTermFile: mem.longTermFile,
-    streamOutput: env.stream,
+    streamOutput,
     whenRendered,
     emotion,
     recognizer,
