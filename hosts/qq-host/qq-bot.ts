@@ -17,6 +17,8 @@ export interface QqBotConfig {
   wsUrl: string;
   /** OneBot HTTP API 地址，默认 http://127.0.0.1:3000 */
   httpBase: string;
+  /** 访问令牌（NapCat 网络配置里设置了令牌时必填；也可在 WebUI 里留空） */
+  token?: string;
   /** 触发词（无 @ 时以此开头触发），默认“蕙” */
   trigger: string;
   /** 每群冷却（毫秒），默认 3000 */
@@ -26,9 +28,11 @@ export interface QqBotConfig {
 }
 
 export function readQqEnv(): QqBotConfig {
+  const token = process.env.QQ_ONE_BOT_TOKEN;
   return {
     wsUrl: process.env.QQ_ONE_BOT_WS ?? "ws://127.0.0.1:3001",
     httpBase: (process.env.QQ_ONE_BOT_HTTP ?? "http://127.0.0.1:3000").replace(/\/+$/, ""),
+    token: token !== undefined && token !== "" ? token : undefined,
     trigger: process.env.QQ_TRIGGER ?? "蕙",
     cooldownMs: Number(process.env.QQ_COOLDOWN_MS ?? 3000) || 3000,
     maxReplyLen: Number(process.env.QQ_MAX_REPLY_LEN ?? 500) || 500,
@@ -96,10 +100,18 @@ export function splitForSend(text: string, maxLen: number): string[] {
   return parts;
 }
 
-async function httpPost(httpBase: string, action: string, params: Record<string, unknown>): Promise<void> {
+async function httpPost(
+  httpBase: string,
+  action: string,
+  params: Record<string, unknown>,
+  token?: string,
+): Promise<void> {
   await fetch(`${httpBase}${action}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token !== undefined ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(params),
   });
 }
@@ -160,7 +172,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
             await httpPost(config.httpBase, "/send_group_msg", {
               group_id: ev.group_id,
               message: chunk,
-            });
+            }, config.token);
           }
         } catch (err) {
           // eslint-disable-next-line no-console
@@ -185,7 +197,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         await httpPost(config.httpBase, "/send_group_msg", {
           group_id: ev.group_id,
           message: chunk,
-        });
+        }, config.token);
       }
     });
   };
@@ -193,9 +205,14 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
   let ws: WebSocket | undefined;
   let closed = false;
   const connect = (): void => {
+    // 带访问令牌：NapCat WebSocket 鉴权用 access_token 查询参数
+    const wsTarget =
+      config.token !== undefined
+        ? `${config.wsUrl}${config.wsUrl.includes("?") ? "&" : "?"}access_token=${encodeURIComponent(config.token)}`
+        : config.wsUrl;
     // eslint-disable-next-line no-console
     console.log(`[qq-bot] 连接 ${config.wsUrl}（触发：@ 或 “${config.trigger}”开头）`);
-    ws = new WebSocket(config.wsUrl);
+    ws = new WebSocket(wsTarget);
     ws.addEventListener("open", () => {
       // eslint-disable-next-line no-console
       console.log("[qq-bot] 已连接，等待群消息…");
