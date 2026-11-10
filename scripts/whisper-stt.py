@@ -26,6 +26,13 @@ try:
 except Exception:
     pass  # 若未来不再需要，静默跳过
 
+# 词表偏置：把人设常用词写进 initial_prompt，减少同音字错误（如 蕙→会）
+INITIAL_PROMPT = "简体中文普通话对话。常见人名与词：蕙、旧书铺、河边、做饭、修东西、坐吧、谢谢、不清楚、加班。"
+
+
+def _transcribe_kwargs() -> dict:
+    return {"language": "zh", "vad_filter": True, "initial_prompt": INITIAL_PROMPT}
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -42,7 +49,7 @@ def main() -> None:
         if not args.path:
             print("missing path", file=sys.stderr)
             sys.exit(2)
-        segments, _info = model.transcribe(args.path, language="zh", vad_filter=True, beam_size=5)
+        segments, _info = model.transcribe(args.path, beam_size=5, **_transcribe_kwargs())
         text = "".join(s.text for s in segments).strip()
         sys.stdout.buffer.write(text.encode("utf-8"))
         return
@@ -62,7 +69,7 @@ def main() -> None:
         while True:
             audio = sd.rec(int(fs * block), samplerate=fs, channels=1, dtype="float32")
             sd.wait()
-            segments, _ = model.transcribe(audio[:, 0], language="zh", vad_filter=True, beam_size=1)
+            segments, _ = model.transcribe(audio[:, 0], beam_size=1, **_transcribe_kwargs())
             for s in segments:
                 t = s.text.strip()
                 if t:
