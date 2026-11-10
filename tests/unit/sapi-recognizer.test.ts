@@ -15,6 +15,13 @@ describe("sapi speech recognizer", () => {
     expect(script).toContain("$r.Recognize()"); // 同步识别一句
   });
 
+  it("失败路径：try/catch 输出 STT_ERR 真实原因", () => {
+    const script = buildRecognizeScript();
+    expect(script).toContain("try {");
+    expect(script).toContain('Write-Output ("STT_ERR: " + $_.Exception.Message)');
+    expect(script).toContain("exit 2");
+  });
+
   it("自定义区域与默认值", () => {
     expect(buildRecognizeScript({ culture: "en-US" })).toContain("CultureInfo('en-US')");
     expect(buildRecognizeScript()).toContain("FromSeconds(3)"); // 默认静音 3s

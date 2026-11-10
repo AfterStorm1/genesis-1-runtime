@@ -21,7 +21,7 @@ export interface SapiSpeechRecognizerOptions {
   endSilenceSec?: number;
 }
 
-/** 生成 PowerShell 识别脚本（导出供测试） */
+/** 生成 PowerShell 识别脚本（导出供测试）；失败时输出 STT_ERR 前缀的真实原因并 exit 2 */
 export function buildRecognizeScript(opts?: SapiSpeechRecognizerOptions): string {
   const culture = opts?.culture ?? "zh-CN";
   const silence = opts?.silenceSec ?? 3;
@@ -29,6 +29,7 @@ export function buildRecognizeScript(opts?: SapiSpeechRecognizerOptions): string
   const endSilence = opts?.endSilenceSec ?? 1.5;
   return (
     `[Console]::OutputEncoding = [Text.Encoding]::UTF8; ` +
+    `try { ` +
     `Add-Type -AssemblyName System.Speech; ` +
     `$c = New-Object System.Globalization.CultureInfo('${culture}'); ` +
     `$r = New-Object System.Speech.Recognition.SpeechRecognitionEngine($c); ` +
@@ -37,7 +38,10 @@ export function buildRecognizeScript(opts?: SapiSpeechRecognizerOptions): string
     `$r.EndSilenceTimeout = [TimeSpan]::FromSeconds(${endSilence}); ` +
     `$r.SetInputToDefaultAudioDevice(); ` +
     `$r.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar())); ` +
-    `$res = $r.Recognize(); if ($res) { Write-Output $res.Text }; $r.Dispose()`
+    `$res = $r.Recognize(); if ($res) { Write-Output $res.Text }; $r.Dispose() ` +
+    `} catch { ` +
+    `Write-Output ("STT_ERR: " + $_.Exception.Message); exit 2 ` +
+    `}`
   );
 }
 
@@ -67,7 +71,13 @@ export function createSapiSpeechRecognizer(opts?: SapiSpeechRecognizerOptions): 
             resolve(""); // 超时 = 没听清
             return;
           }
-          if (code === 0) resolve(out.trim());
+          if (code === 0) {
+            resolve(out.trim());
+            return;
+          }
+          // 脚本内 try/catch 会把真实原因写到 STT_ERR 行
+          const errLine = out.split(/\r?\n/).find((l) => l.startsWith("STT_ERR:"));
+          if (errLine !== undefined) reject(new Error(errLine.slice("STT_ERR:".length).trim()));
           else reject(new Error(`sapi_stt_exit_${code ?? "unknown"}`));
         });
         child.on("error", (err) => {
