@@ -205,7 +205,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     const text = extractUserText(ev, ev.self_id, config.trigger);
     if (text === null) {
       // 可见日志：文本消息未触发（不是 @ 也没触发词开头）
-      if (!/[CQ:image|CQ:face|CQ:at/.test(ev.raw_message ?? "")) {
+      if (!/\[CQ:(image|face|at)/.test(ev.raw_message ?? "")) {
         // eslint-disable-next-line no-console
         console.log(`[qq-bot] 未触发 群${groupId}：需要 @机器人 或以“${config.trigger}”开头`);
       }
