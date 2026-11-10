@@ -63,7 +63,25 @@ describe("streaming text renderer", () => {
     r.dispose();
   });
 
+  it("whenIdle：流式进行中挂起，播完后 resolve", async () => {
+    vi.useFakeTimers();
+    const r = createStreamingTextRenderer({ charDelayMs: 10, sentenceDelayMs: 10, write: () => {} });
+    r.apply(signalWith("坐吧\n好"));
+    expect(r.isBusy()).toBe(true);
+    let resolved = false;
+    const p = r.whenIdle().then(() => {
+      resolved = true;
+    });
+    await vi.advanceTimersByTimeAsync(30);
+    expect(resolved).toBe(false);
+    await vi.advanceTimersByTimeAsync(300);
+    await p;
+    expect(resolved).toBe(true);
+    expect(r.isBusy()).toBe(false);
+    r.dispose();
+  });
+
   it("写入 streaming-renderer 证据产物", () => {
-    writeEvidenceLog("streaming-renderer.test", ["char/sentence pacing; dispose cancels; busy guard"], true);
+    writeEvidenceLog("streaming-renderer.test", ["char/sentence pacing; dispose cancels; busy guard; whenIdle"], true);
   });
 });

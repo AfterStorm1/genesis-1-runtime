@@ -17,6 +17,10 @@ export interface StreamingTextRendererOptions {
 
 export interface StreamingTextRenderer extends Renderer {
   readonly applied: ExpressionSignal[];
+  /** 是否正在流式输出 */
+  isBusy(): boolean;
+  /** 等待当前流式输出结束（空闲时立即 resolve；dispose 也会解除等待） */
+  whenIdle(): Promise<void>;
 }
 
 export function createStreamingTextRenderer(opts?: StreamingTextRendererOptions): StreamingTextRenderer {
@@ -27,6 +31,12 @@ export function createStreamingTextRenderer(opts?: StreamingTextRendererOptions)
   const applied: ExpressionSignal[] = [];
   let busy = false;
   let disposed = false;
+  const idleWaiters: Array<() => void> = [];
+
+  function markIdle(): void {
+    busy = false;
+    for (const w of idleWaiters.splice(0)) w();
+  }
 
   function later(ms: number, fn: () => void): void {
     const t = setTimeout(() => {
@@ -41,7 +51,7 @@ export function createStreamingTextRenderer(opts?: StreamingTextRendererOptions)
     const nextLine = (): void => {
       if (disposed || li >= lines.length) {
         if (!disposed) write("\n");
-        busy = false;
+        markIdle();
         return;
       }
       const line = lines[li++] ?? "";
@@ -71,6 +81,13 @@ export function createStreamingTextRenderer(opts?: StreamingTextRendererOptions)
       },
     },
     applied,
+    isBusy() {
+      return busy;
+    },
+    whenIdle() {
+      if (!busy) return Promise.resolve();
+      return new Promise<void>((resolve) => idleWaiters.push(resolve));
+    },
     async mount(): Promise<void> {
       // 无资源
     },
@@ -86,7 +103,7 @@ export function createStreamingTextRenderer(opts?: StreamingTextRendererOptions)
       disposed = true;
       for (const t of timers) clearTimeout(t);
       timers.clear();
-      busy = false;
+      markIdle(); // 解除 whenIdle 等待
     },
   };
 }

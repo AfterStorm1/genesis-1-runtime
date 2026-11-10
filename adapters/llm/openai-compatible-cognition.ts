@@ -27,6 +27,8 @@ export interface OpenAiCompatibleCognitionOptions {
   maxTokens?: number;
   /** 追加到 system 提示词末尾（宿主扩展用，如世界书/额外规则） */
   extraSystemPrompt?: string;
+  /** 静音模式：不输出 llm.request 等 info 日志（终端流式场景用） */
+  quiet?: boolean;
 }
 
 export interface OpenAiCompatibleCognition extends Cognition {
@@ -175,6 +177,7 @@ export function createOpenAiCompatibleCognition(
   const temperature = opts.temperature ?? 0.7;
   const maxTokens = opts.maxTokens ?? 512;
   const extraSystemPrompt = opts.extraSystemPrompt;
+  const quiet = opts.quiet === true;
   let logger: Logger | undefined;
 
   return {
@@ -186,7 +189,7 @@ export function createOpenAiCompatibleCognition(
     },
     async *onInput(input: CognitionInput): AsyncGenerator<CognitionOutput> {
       const messages = buildMessages(input, opts.persona, extraSystemPrompt);
-      logger?.info("llm.request", { model, baseUrl, turns: messages.length });
+      if (!quiet) logger?.info("llm.request", { model, baseUrl, turns: messages.length });
       let raw: string;
       try {
         raw = await chatOnce({ baseUrl, model, apiKey, messages, temperature, maxTokens });

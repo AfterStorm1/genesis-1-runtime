@@ -37,6 +37,7 @@ import { createTerminationHook } from "./adapters/safety-guard/termination-hook"
 import type { TerminationHook } from "./adapters/safety-guard/termination-hook";
 import { createMockSpeechRenderer } from "./adapters/renderers/mock-speech-renderer";
 import { createStreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
+import type { StreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
 import { createTextRenderer } from "./adapters/renderers/text-renderer";
 import type { PersonaCardV3 } from "./core/contract/persona";
 
@@ -59,6 +60,8 @@ export interface ChatRuntime {
   longTermFile: string;
   /** 是否流式输出（true 时回复由渲染器逐句打印，主循环不重复打印） */
   streamOutput: boolean;
+  /** 流式模式下等待渲染器播完（否则下一个输入提示会与打字机输出串行） */
+  whenRendered?: () => Promise<void>;
 }
 
 export interface ChatRuntimeOptions {
@@ -155,11 +158,17 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
       apiKey,
       extraSystemPrompt,
       temperature: Number.isFinite(temperature) ? temperature : undefined,
+      quiet: streamOutput, // 流式模式下静音 llm.request 日志，避免串行干扰打字机输出
     }),
     memory, // 对话记忆走契约预留的 MemoryStore → recall 路径
     hooks: [guard], // 终止互动钩子（beforeCognition 强制判定）
     batchTimeoutMs: 120_000, // 本地 LLM（CPU 推理）延迟远高于默认 2s 批次超时
   });
+
+  // 流式模式下：主循环等待渲染器播完再显示下一个输入提示
+  const whenRendered = streamOutput
+    ? (): Promise<void> => (textRenderer as StreamingTextRenderer).whenIdle()
+    : undefined;
 
   return {
     rt,
@@ -174,6 +183,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     historyFile,
     longTermFile,
     streamOutput,
+    whenRendered,
   };
 }
 
@@ -286,6 +296,9 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       // eslint-disable-next-line no-console
       console.log(`${persona.data.name} (${emotion}) > ${text}`);
     }
+
+    // 流式模式：等打字机播完再显示下一个输入提示，避免回复串进“你 >”输入行
+    await chat.whenRendered?.();
 
     // —— 长期记忆提炼（每 summaryEvery 个用户回合一次）——
     userTurns += 1;
