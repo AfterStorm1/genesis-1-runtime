@@ -11,6 +11,7 @@ import type { ChildProcess } from "node:child_process";
 import type { EngineProbe, StreamHandle, TranscriberCore, Utterance } from "./transcriber-core";
 import type { VoiceSource } from "./voice-source";
 import { createCloudTranscriber, probeCloud, resolveCloudConfig } from "./cloud-transcriber";
+import { decodeSilkToWav, isSilkFile } from "./silk-decode";
 
 export const WHISPER_DOWNLOAD_HINTS = {
   whisper:
@@ -195,17 +196,30 @@ export function createWhisperCppEngine(opts?: WhisperEngineOptions): WhisperCppE
       }
       // 云端后端：OpenAI 兼容 /audio/transcriptions（SiliconFlow 等，质量最好）
       if (probe.mode === "cloud") {
-        // 云 API 只收标准格式：amr/silk 先本地转 16k wav（转码失败则原文件直传兜底）
+        // 云 API 只收标准格式：QQ silk v3 → silk-wasm 解码；其他 exotic → 本地 python 转码
         let target = source.filePath;
         if (/\.(amr|silk|slk|ogg|opus)$/i.test(target)) {
           const wavOut = path.join(runtimeTmpDir(), `${Date.now()}-conv.wav`);
-          try {
-            await convertToWav16k(target, wavOut);
-            target = wavOut;
-          } catch (convErr) {
-            // eslint-disable-next-line no-console
-            console.warn(`[stt] 转码失败，尝试原格式直传：${convErr instanceof Error ? convErr.message : String(convErr)}`);
+          let converted = false;
+          if (isSilkFile(target)) {
+            try {
+              await decodeSilkToWav(target, wavOut);
+              converted = true;
+            } catch (silkErr) {
+              // eslint-disable-next-line no-console
+              console.warn(`[stt] silk 解码失败：${silkErr instanceof Error ? silkErr.message : String(silkErr)}`);
+            }
           }
+          if (!converted) {
+            try {
+              await convertToWav16k(target, wavOut);
+              converted = true;
+            } catch (convErr) {
+              // eslint-disable-next-line no-console
+              console.warn(`[stt] 转码失败，尝试原格式直传：${convErr instanceof Error ? convErr.message : String(convErr)}`);
+            }
+          }
+          if (converted) target = wavOut;
         }
         return createCloudTranscriber().transcribeFile({ ...source, filePath: target });
       }
