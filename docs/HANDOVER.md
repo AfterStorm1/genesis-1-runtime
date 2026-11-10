@@ -1,33 +1,33 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-10T05:26:41.359Z（北京时间 2026/11/10 13:26:41）
+> 自动生成时间：2026-11-10T20:00:29.963Z（北京时间 2026/11/11 04:00:29）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
 ## 自动快照
 
 - Node 版本：v24.22.1
-- 代码规模：core 54 个文件 / adapters 18 / tests 35 / 全仓约 147 个文件（不含 node_modules）
-- 测试用例：约 187 个（unit + e2e，含 A01a–A17 对应断言）
+- 代码规模：core 54 个文件 / adapters 28 / tests 43 / 全仓约 214 个文件（不含 node_modules）
+- 测试用例：约 233 个（unit + e2e，含 A01a–A17 对应断言）
 - 证据产物：18/18；CI 状态：CI 全绿
 
 ### 最近提交（git log -8）
 
-`c190ce1 fix: test issues — waitForTruthy in tts test, clock injection for LTM TTL test, fix forget-rollback expectation`
-`6567c4c feat: TTS voice output (Windows SAPI speaker + tts-speech-renderer reusing feedback loop)`
-`1b60d6f fix: wait for streaming renderer before next prompt (whenIdle); quiet llm.request logs in stream mode`
-`3cf64d9 feat: streaming output (speech segmenter + typewriter text renderer, value-level)`
-`fb21aae docs: record Hui setting landing (handover-notes, deviations D-22)`
-`0797b0e feat: protagonist Hui persona+rules; speech postprocess (filter table, punctuation, lead-word); termination guard hook (highest-priority)`
-`39727b8 chore: refresh HANDOVER.md (daily scheduled); allow env injection in gen-handover`
-`a17c127 fix: ship real config/world/rules.md; warn when CHAT_WORLD_RULES file missing`
+`db1a1fa feat: QQ OneBot access-token support (QQ_ONE_BOT_TOKEN via ws query + HTTP bearer); fix ASCII-only qq-chat.cmd trigger`
+`50e3c24 feat: QQ group voice messages — auto-transcribe [CQ:record] via engine (cloud-first) and reply in character`
+`8c07059 fix: voice recording writes to project data/tmp (user Temp ACL broken on this machine)`
+`77a9c5d feat: /shuo now records mic and transcribes via engine (cloud-first) instead of Windows SAPI; SAPI stays as fallback`
+`feb6bab fix: reword repeated-question rule to prevent rule-text leakage into dialogue`
+`508bb6c feat: cloud STT backend (OpenAI-compatible /audio/transcriptions, SiliconFlow default; auto-priority cloud>bin>py)`
+`a27d417 feat: initial_prompt vocabulary bias for persona terms in STT (fix homophone errors like 会->蕙)`
+`061ab40 fix: av.open compat shim in stt.py (PyAV 19 removed metadata_errors; drop version pin)`
 
 ### 本地 Ollama 模型
 
 ```
-NAME          ID              SIZE      MODIFIED     
-qwen3:8b      500a1f067a9f    5.2 GB    36 hours ago    
-qwen2.5:7b    845dbda0ea48    4.7 GB    37 hours ago
+qwen2.5:7b
+qwen3:8b
+（来源：磁盘 manifest）
 ```
 
 ---
@@ -68,16 +68,49 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
    真·token 级提前输出为形状级演进（见 deviations D-23）。
 10. TTS 语音输出：`adapters/tts/sapi-speaker.ts`（Windows SAPI 离线朗读）+ `adapters/renderers/tts-speech-renderer.ts`
     （默认开启；CHAT_TTS=0 关闭，CHAT_TTS_RATE 调语速 -10~10）。Speaker 抽象可替换 edge-tts/piper。
+11. 情绪状态机（轻量 InternalDrive）：`adapters/drive/emotion-state-machine.ts` + `emotion-bias-hook.ts`
+    （默认开启；CHAT_EMOTION=0 关闭；每 60s tick，情绪波动超阈值她会主动说话；聊天命令 /情绪 查看）。
+12. 记忆第一人称感受层：`adapters/llm/feeling-memory.ts`（感受会淡：强度逐日衰减，容量 20/TTL 14 天），
+    摘要器一次提炼 [事实]+[感受] 两节；/记忆 分「感受」「事实」两栏，/忘记 同时清两层。
+13. STT 语音输入：`adapters/stt/sapi-speech-recognizer.ts`（Windows SAPI 语音识别，离线）；
+    聊天里打 `/说` 对着麦克风说话；需系统装有中文语音识别语言包；CHAT_STT_LANG 可换区域。
+14. 反应样本库 + 每周自检：`config/reactions/samples.json`（15 条：12 工作/通用 + 3 生活面，作为语气校准
+    few-shot 注入 + 自检题集）；`weekly-check.cmd` 跑 9 步自检，报告固定在 `docs/evidence/weekly-check-latest.md`
+    （已设每周一 09:00 自动执行）。反应评测为关键词级粗评。
+15. 人格去工作场景依赖：规则文件顶部「场景框架」元指令 + 「生活面」节（住处=旧京老城区小公寓、
+    旧书铺老板/隔壁老奶奶两个工作外关系，已填）+ 「非工作场景」规则节；工作规则降入「可选场景」节。
+    验收：`scripts/check-descope.ts`（V1-V3，报告 docs/evidence/persona-descope/）；V4 回归 = weekly-check。
+16. QQ 群机器人宿主（值级）：`hosts/qq-host/qq-bot.ts`（OneBot 11 正向 WS，适配 NapCatQQ；每群独立运行时
+    记忆隔离、@或触发词应答、冷却防刷、群聊关 TTS/流式）；`qq-chat.cmd` 启动；ChatRuntimeOptions 增加
+    historyDir/tts/stream/emotion 覆盖。⚠️ 非官方协议有封号风险，建议专用小号。
+17. 统一语音转写底座（Phase 1，值级）：`adapters/stt/voice-source.ts`（音频源抽象：file/device/network 三类，
+    新增场景=新增 Source）+ `transcriber-core.ts`（TranscriberCore 抽象：probe/transcribeFile/transcribeStream）
+    + `whisper-engine.ts`（whisper.cpp 双模式实现：ffmpeg 转码 + whisper-cli 文件 / whisper-stream 流式，
+    零 npm 依赖，引擎缺失优雅降级+下载指引）+ `scripts/voice.ts`/`voice.cmd`（probe/file/listen 三个入口）。
+    后续 Phase：VRChat NetSource（UDP Opus）、电话音频桥、宿主接线（QQ/飞书语音消息）。
+18. 语音转写三后端 + 一键安装（已落地并跑通）：`setup-voice.cmd`（12 分钟时间护栏；whisper.cpp 二进制
+    自动发现历史 release + 失败自动回退 Python 后端 faster-whisper）；云端 `adapters/stt/cloud-transcriber.ts`
+    （OpenAI 兼容 /audio/transcriptions，默认 SiliconFlow SenseVoiceSmall；STT_CLOUD_KEY/…BASE_URL/…MODEL，
+    自动优先级 cloud>bin>py）。本机实际状态：**Python 后端已装**（tools/whisper-py venv，faster-whisper 1.2.1，
+    模型缓存 data/hf-cache）；llm-config.cmd 已配 SiliconFlow key → probe 显示 mode=cloud。
+    坑：av 19 移除了 metadata_errors → whisper-stt.py 内置 av.open 垫片；用户 .cache/Temp 有 ACL/拦截问题 →
+    HF_HOME 与录音临时文件都放项目 data/ 下。`/说` 已升级为「录音→引擎转写（cloud 优先）」，SAPI 仅兜底。
+19. QQ 群机器人已上线（2026-11-11 凌晨实测通）：NapCat v4.18.42 装在 `D:\ruanjian\NapCat.Shell.Windows.Node`
+    （napcat.bat 启动，扫码登录小号）；OneBot 服务 WS 3001 + HTTP 3000，令牌可关或用 QQ_ONE_BOT_TOKEN；
+    `qq-chat.cmd` 启动后群内 @/触发词文本回复 + 语音自动转写（cloud）均已验证；每群独立记忆（data/chat-history/qq-<群号>）。
+    ⚠️ 非官方协议封号风险；每次开机需依次启动 NapCat → qq-chat.cmd。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 
 1. 高音质 TTS（edge-tts/piper 替换 SAPI Speaker，值级）；
 2. Live2D / VRChat OSC（形状级，先三档判定评审）；
-3. Web 聊天宿主（复用 demo-chat 导出的 createChatRuntime/sendUserMessage，值级）；
+3. Web 聊天宿主（复用 createChatRuntime/sendUserMessage，值级）；
 4. 多角色共存 demo（sharedBus 已预留，值级可先跑）；
 5. 长期记忆向量化（把 long-term-memory 换成 embedding 检索，值级）；
 6. 工具自动执行回路（CognitionOutput.tool_call → ToolRegistry.invoke 自动接线，形状级）；
-7. 待确认类型清单（docs/def/pending-types.md，21 项）逐项拍板。
+7. 飞书群机器人宿主（个人合法、国内可用，值级，半天）；
+8. VRChat NetSource 实时语音（Phase 2，值级）；
+9. 待确认类型清单（docs/def/pending-types.md，21 项）逐项拍板。
 
 ## 新会话交接检查清单（接手第一件事）
 

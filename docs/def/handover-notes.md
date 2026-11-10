@@ -53,18 +53,30 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
     新增场景=新增 Source）+ `transcriber-core.ts`（TranscriberCore 抽象：probe/transcribeFile/transcribeStream）
     + `whisper-engine.ts`（whisper.cpp 双模式实现：ffmpeg 转码 + whisper-cli 文件 / whisper-stream 流式，
     零 npm 依赖，引擎缺失优雅降级+下载指引）+ `scripts/voice.ts`/`voice.cmd`（probe/file/listen 三个入口）。
-    待装：tools/whisper/{whisper-cli,whisper-stream,ggml-*.bin} + tools/ffmpeg/ffmpeg.exe。
     后续 Phase：VRChat NetSource（UDP Opus）、电话音频桥、宿主接线（QQ/飞书语音消息）。
+18. 语音转写三后端 + 一键安装（已落地并跑通）：`setup-voice.cmd`（12 分钟时间护栏；whisper.cpp 二进制
+    自动发现历史 release + 失败自动回退 Python 后端 faster-whisper）；云端 `adapters/stt/cloud-transcriber.ts`
+    （OpenAI 兼容 /audio/transcriptions，默认 SiliconFlow SenseVoiceSmall；STT_CLOUD_KEY/…BASE_URL/…MODEL，
+    自动优先级 cloud>bin>py）。本机实际状态：**Python 后端已装**（tools/whisper-py venv，faster-whisper 1.2.1，
+    模型缓存 data/hf-cache）；llm-config.cmd 已配 SiliconFlow key → probe 显示 mode=cloud。
+    坑：av 19 移除了 metadata_errors → whisper-stt.py 内置 av.open 垫片；用户 .cache/Temp 有 ACL/拦截问题 →
+    HF_HOME 与录音临时文件都放项目 data/ 下。`/说` 已升级为「录音→引擎转写（cloud 优先）」，SAPI 仅兜底。
+19. QQ 群机器人已上线（2026-11-11 凌晨实测通）：NapCat v4.18.42 装在 `D:\ruanjian\NapCat.Shell.Windows.Node`
+    （napcat.bat 启动，扫码登录小号）；OneBot 服务 WS 3001 + HTTP 3000，令牌可关或用 QQ_ONE_BOT_TOKEN；
+    `qq-chat.cmd` 启动后群内 @/触发词文本回复 + 语音自动转写（cloud）均已验证；每群独立记忆（data/chat-history/qq-<群号>）。
+    ⚠️ 非官方协议封号风险；每次开机需依次启动 NapCat → qq-chat.cmd。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 
 1. 高音质 TTS（edge-tts/piper 替换 SAPI Speaker，值级）；
 2. Live2D / VRChat OSC（形状级，先三档判定评审）；
-3. Web 聊天宿主（复用 demo-chat 导出的 createChatRuntime/sendUserMessage，值级）；
+3. Web 聊天宿主（复用 createChatRuntime/sendUserMessage，值级）；
 4. 多角色共存 demo（sharedBus 已预留，值级可先跑）；
 5. 长期记忆向量化（把 long-term-memory 换成 embedding 检索，值级）；
 6. 工具自动执行回路（CognitionOutput.tool_call → ToolRegistry.invoke 自动接线，形状级）；
-7. 待确认类型清单（docs/def/pending-types.md，21 项）逐项拍板。
+7. 飞书群机器人宿主（个人合法、国内可用，值级，半天）；
+8. VRChat NetSource 实时语音（Phase 2，值级）；
+9. 待确认类型清单（docs/def/pending-types.md，21 项）逐项拍板。
 
 ## 新会话交接检查清单（接手第一件事）
 
