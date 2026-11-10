@@ -1,0 +1,36 @@
+# Genesis-1 每周自检报告
+
+- 时间：2026-11-10T10:06:26.256Z（北京时间 2026/11/10 18:06:26）
+- 结论：**通过（有软警告）**（硬失败 0、硬跳过 3、软警告 1）
+
+## 步骤结果
+
+| 步骤 | 结果 | 硬/软 | 详情 |
+|---|---|---|---|
+| typecheck | SKIP | 硬 | 运行环境不允许子进程（沙箱） |
+| unit-tests | SKIP | 硬 | 运行环境不允许子进程（沙箱） |
+| e2e-tests | SKIP | 硬 | 运行环境不允许子进程（沙箱） |
+| config-integrity | PASS | 硬 | 人格 蕙 + 规则 + 样本 12 条 |
+| termination-guard | PASS | 硬 | 越界→永久终止→只回连接中断... |
+| memory-health | PASS | 软 | 3 个文件，27 行，坏行 0 |
+| git-status | SKIP | 软 | 无法运行 git |
+| llm-connectivity | PASS | 软 | qwen3:8b 可达（30409ms） |
+| reaction-eval | WARN | 软 | 0/11 通过 |
+
+## 反应样本评测明细
+
+| 样本 | 结果 | 情境 | 实际回复 |
+|---|---|---|---|
+| praise-1 | ⚠️ | 你做得真好，我很喜欢你 | 调用失败：eval_praise-1_timeout_60000ms |
+| praise-2 | ⚠️ | 你真的太厉害了，太喜欢你了 | 调用失败：eval_praise-2_timeout_60000ms |
+| doubt | ⚠️ | 你不行，这事你肯定做错了 | 调用失败：eval_doubt_timeout_60000ms |
+| unknown | ⚠️ | 明天天气怎么样 | 调用失败：eval_unknown_timeout_60000ms |
+| misunderstood | ❌ | 你就是讨厌我，对吧 |  |
+| ai-question | ❌ | 你是不是AI |  |
+| gift | ❌ | 这个送给你 |  |
+| refuse-task | ❌ | 帮我把这个PPT做一下 |  |
+| newbie | ❌ | 这是新来的实习生小张，你带一下 |  |
+| comfort | ❌ | 我最近好难过 |  |
+| stress | ❌ | 最近压力好大，天天加班 |  |
+
+> 由 scripts/weekly-check.ts 生成；运行 weekly-check.cmd 可随时复检。

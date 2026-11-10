@@ -39,6 +39,7 @@ import { createFeelingMemory } from "./adapters/llm/feeling-memory";
 import type { FeelingMemory } from "./adapters/llm/feeling-memory";
 import { createSummarizer } from "./adapters/llm/summarizer";
 import type { Summarizer } from "./adapters/llm/summarizer";
+import { buildFewShotBlock, loadReactionSamples } from "./adapters/llm/reaction-samples";
 import { createTerminationHook } from "./adapters/safety-guard/termination-hook";
 import type { TerminationHook } from "./adapters/safety-guard/termination-hook";
 import { createEmotionStateMachine } from "./adapters/drive/emotion-state-machine";
@@ -144,10 +145,25 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
       console.warn(`[config] CHAT_WORLD_RULES 指向的文件不存在，已忽略：${worldRulesFile}`);
     }
   }
+  // 反应样本库（默认 config/reactions/samples.json）：作为语气校准 few-shot 注入
+  const samplesPath =
+    process.env.CHAT_REACTION_SAMPLES !== undefined
+      ? path.resolve(process.env.CHAT_REACTION_SAMPLES)
+      : path.join(process.cwd(), "config", "reactions", "samples.json");
+  let samplesBlock: string | undefined;
+  if (fs.existsSync(samplesPath)) {
+    const { samples, warnings } = loadReactionSamples(samplesPath);
+    for (const w of warnings) {
+      // eslint-disable-next-line no-console
+      console.warn(`[config] ${w}`);
+    }
+    samplesBlock = buildFewShotBlock(samples) || undefined;
+  }
   const extraSystemPrompt =
     [
       process.env.CHAT_EXTRA_SYSTEM?.trim() || undefined,
       worldRules?.trim() ? `[世界观/规则]\n${worldRules.trim()}` : undefined,
+      samplesBlock,
     ]
       .filter((x): x is string => x !== undefined)
       .join("\n\n") || undefined;
