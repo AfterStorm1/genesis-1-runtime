@@ -1,6 +1,6 @@
 # docs/evidence 索引
 
-生成时间：2026-11-08T22:51:25.463Z
+生成时间：2026-11-10T04:59:33.066Z
 
 状态说明：本地跑过写 local pass；CI 状态见 ci-status.md（GitHub Actions 全绿）。
 

@@ -15,6 +15,8 @@ export interface LongTermMemoryOptions {
   maxEntries?: number;
   /** 久未使用且不重要条目的归档天数，默认 30；0 = 禁用 TTL */
   ttlDays?: number;
+  /** 时钟注入（测试用；默认 Date.now） */
+  now?: () => number;
 }
 
 export interface MemoryEntry {
@@ -54,6 +56,7 @@ function daysBetween(a: number, b: number): number {
 export function createLongTermMemory(opts: LongTermMemoryOptions): LongTermMemory {
   const maxEntries = opts.maxEntries ?? 50;
   const ttlDays = opts.ttlDays ?? 30;
+  const nowFn = opts.now ?? ((): number => Date.now());
   const entries: MemoryEntry[] = [];
   let seq = 0;
 
@@ -86,7 +89,7 @@ export function createLongTermMemory(opts: LongTermMemoryOptions): LongTermMemor
     for (const e of entries) {
       if (e.archived !== true) e.archived = false;
       e.importance = Math.min(5, Math.max(1, Number(e.importance) || 3));
-      if (typeof e.createdAt !== "number") e.createdAt = Date.now();
+      if (typeof e.createdAt !== "number") e.createdAt = nowFn();
       if (typeof e.lastRecalledAt !== "number") e.lastRecalledAt = e.createdAt;
     }
   } catch {
@@ -100,7 +103,7 @@ export function createLongTermMemory(opts: LongTermMemoryOptions): LongTermMemor
   }
 
   function prune(): number {
-    const now = Date.now();
+    const now = nowFn();
     let archived = 0;
     // TTL：久未使用（>ttlDays）且重要度 ≤2 → 归档
     if (ttlDays > 0) {
@@ -137,7 +140,7 @@ export function createLongTermMemory(opts: LongTermMemoryOptions): LongTermMemor
     add(text, importance = 3) {
       const t = text.trim();
       if (t === "") return;
-      const now = Date.now();
+      const now = nowFn();
       seq += 1;
       entries.push({
         id: `m-${now}-${seq}`,
@@ -151,7 +154,7 @@ export function createLongTermMemory(opts: LongTermMemoryOptions): LongTermMemor
     },
     promptItems(limit = 10) {
       prune();
-      const now = Date.now();
+      const now = nowFn();
       const active = entries.filter((e) => e.archived !== true);
       active.sort((a, b) => score(b, now) - score(a, now));
       const picked = active.slice(0, limit);
@@ -177,7 +180,7 @@ export function createLongTermMemory(opts: LongTermMemoryOptions): LongTermMemor
     },
     prune,
     restoreArchived(maxAgeMs = 24 * 3600_000) {
-      const cutoff = Date.now() - maxAgeMs;
+      const cutoff = nowFn() - maxAgeMs;
       let n = 0;
       for (const e of entries) {
         if (e.archived === true && e.lastRecalledAt >= cutoff) {

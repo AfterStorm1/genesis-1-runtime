@@ -1,0 +1,4 @@
+Genesis-1 evidence: speech-segmenter.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+25-char atomic; semantic split; punctuation keep

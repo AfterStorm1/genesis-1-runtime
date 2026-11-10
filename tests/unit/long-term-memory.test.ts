@@ -31,13 +31,12 @@ describe("long-term memory", () => {
 
   it("TTL：久未使用且重要度 ≤2 → 归档；重要度高不受 TTL 影响", () => {
     const file = tmpFile();
-    const m = createLongTermMemory({ filePath: file, ttlDays: 30 });
+    // 时钟注入：先 t=0 添加，再把时间拨到 60 天后触发 TTL
+    let t = 0;
+    const m = createLongTermMemory({ filePath: file, ttlDays: 30, now: () => t });
     m.add("会被遗忘的低重要度", 1);
     m.add("永远记住的约定", 5);
-    // 把 lastRecalledAt 拨回 60 天前，模拟久未使用
-    for (const e of m.list()) {
-      e.lastRecalledAt -= 60 * 86_400_000;
-    }
+    t += 60 * 86_400_000; // 60 天未使用
     m.prune();
     const active = m.list().filter((e) => e.archived !== true).map((e) => e.text);
     expect(active).toContain("永远记住的约定");
@@ -51,7 +50,9 @@ describe("long-term memory", () => {
     expect(m.forget("咖啡")).toBe(1);
     expect(m.promptItems().map((i) => i.text)).toEqual(["用户喜欢下雨天"]);
     expect(m.restoreArchived()).toBe(1);
-    expect(m.promptItems().map((i) => i.text).sort()).toEqual(["用户喜欢咖啡", "用户喜欢下雨天"]);
+    // 恢复后两条都活跃（顺序无关，只断言集合）
+    const texts = m.promptItems().map((i) => i.text).sort();
+    expect(texts).toEqual(["用户喜欢下雨天", "用户喜欢咖啡"]);
   });
 
   it("持久化：重启（新实例）恢复活跃与归档状态", () => {

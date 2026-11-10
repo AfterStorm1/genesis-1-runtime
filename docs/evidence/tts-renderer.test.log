@@ -1,0 +1,4 @@
+Genesis-1 evidence: tts-renderer.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+feedback loop; failure -> signal_error; interruption; skip non-speech

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T22:51:24.696Z",
+  "generatedAt": "2026-11-10T04:59:32.401Z",
   "result": "local pass",
   "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "semantics": {
@@ -9,11 +9,11 @@
   "measurements": [
     {
       "label": "publish_with_slow_subscriber_ms",
-      "value": "19.931"
+      "value": "19.318"
     },
     {
       "label": "publish_no_subscriber_ns_per_op",
-      "value": "49.6"
+      "value": "41.6"
     },
     {
       "label": "dropIfBusy_reentrant",

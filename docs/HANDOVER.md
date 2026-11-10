@@ -1,33 +1,31 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-09T20:02:31.771Z（北京时间 2026/11/10 04:02:31）
+> 自动生成时间：2026-11-10T04:59:49.682Z（北京时间 2026/11/10 12:59:49）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
 ## 自动快照
 
 - Node 版本：v24.22.1
-- 代码规模：core 54 个文件 / adapters 12 / tests 30 / 全仓约 135 个文件（不含 node_modules）
-- 测试用例：约 160 个（unit + e2e，含 A01a–A17 对应断言）
+- 代码规模：core 54 个文件 / adapters 18 / tests 35 / 全仓约 147 个文件（不含 node_modules）
+- 测试用例：约 187 个（unit + e2e，含 A01a–A17 对应断言）
 - 证据产物：18/18；CI 状态：CI 全绿
 
 ### 最近提交（git log -8）
 
+`6567c4c feat: TTS voice output (Windows SAPI speaker + tts-speech-renderer reusing feedback loop)`
+`1b60d6f fix: wait for streaming renderer before next prompt (whenIdle); quiet llm.request logs in stream mode`
+`3cf64d9 feat: streaming output (speech segmenter + typewriter text renderer, value-level)`
+`fb21aae docs: record Hui setting landing (handover-notes, deviations D-22)`
+`0797b0e feat: protagonist Hui persona+rules; speech postprocess (filter table, punctuation, lead-word); termination guard hook (highest-priority)`
+`39727b8 chore: refresh HANDOVER.md (daily scheduled); allow env injection in gen-handover`
 `a17c127 fix: ship real config/world/rules.md; warn when CHAT_WORLD_RULES file missing`
 `091be89 feat+docs: world-rules/extra-system/temperature env knobs; manual-config-guide covering all human-editable settings`
-`49f7e24 docs: handover pipeline (gen-handover.ts + docs/HANDOVER.md + verify step + daily refresh)`
-`fda9917 feat: long-term memory with forgetting (LLM summarization, capacity+TTL eviction, explicit /forget, archival rollback)`
-`f8959c9 feat: persistent chat memory (JSONL per persona, auto-reload on start)`
-`14a628c polish: persona mes_example few-shot in system prompt; richer Kaguya card; fix system prompt test`
-`3802605 refactor+feat: LLM chat consolidation (openai-compatible adapter, rolling memory, qwen3 default, persistent llm-config, architecture docs, better prompt/parsing)`
-`b1a0d60 docs: update repo url after account rename`
 
 ### 本地 Ollama 模型
 
 ```
-qwen2.5:7b
-qwen3:8b
-（来源：磁盘 manifest；daemon 当前未运行）
+（ollama 不可用或未安装）
 ```
 
 ---
@@ -57,14 +55,22 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 4. 在线 LLM：`llm-config.cmd`（已被 git 忽略）保存 key，模板见 `llm-config.example.cmd`；
    环境变量优先级：LLM_API_KEY 存在即在线（LLM_BASE_URL/LLM_MODEL），否则本地（OLLAMA_*）。
 5. 聊天数据：`data/chat-history/`（每角色一个 .jsonl + .longterm.jsonl），已被 git 忽略。
-6. 一键入口：`chat.cmd`（聊天）、`verify.cmd`（本地 10 步复验，含刷新 HANDOVER.md）。
+6. 一键入口：`chat.cmd`（聊天，默认人格「蕙」+ 默认规则 hui-rules.md）、`verify.cmd`（本地 10 步复验，含刷新 HANDOVER.md）。
 7. 人工配置：人格/世界观/任务/对话偏向/模型/记忆参数全部入口见 `docs/def/manual-config-guide.md`；
    新增可配项：CHAT_WORLD_RULES（规则文件）、CHAT_EXTRA_SYSTEM（追加规则）、CHAT_TEMPERATURE。
+8. 主角「蕙」已录入：人格卡 `config/persona/hui.persona.json`、规则 `config/world/hui-rules.md`；
+   语言过滤表后处理 `adapters/llm/speech-postprocess.ts`（不进 prompt）；最高优先级终止规则
+   `adapters/safety-guard/termination-hook.ts`（PipelineHook 输入侧强制，越界后永久只回“连接中断...”）。
+9. 流式输出（渲染层）：`adapters/llm/speech-segmenter.ts` 切分 + `adapters/renderers/streaming-text-renderer.ts`
+   打字机打印（默认开启；CHAT_STREAM=0 关闭，CHAT_CHAR_DELAY/CHAT_SENTENCE_DELAY 调节奏）。
+   真·token 级提前输出为形状级演进（见 deviations D-23）。
+10. TTS 语音输出：`adapters/tts/sapi-speaker.ts`（Windows SAPI 离线朗读）+ `adapters/renderers/tts-speech-renderer.ts`
+    （默认开启；CHAT_TTS=0 关闭，CHAT_TTS_RATE 调语速 -10~10）。Speaker 抽象可替换 edge-tts/piper。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 
-1. TTS 接真实语音（形状级：需动 feedback 契约，先三档判定评审）；
-2. Live2D / VRChat OSC（形状级，同上）；
+1. 高音质 TTS（edge-tts/piper 替换 SAPI Speaker，值级）；
+2. Live2D / VRChat OSC（形状级，先三档判定评审）；
 3. Web 聊天宿主（复用 demo-chat 导出的 createChatRuntime/sendUserMessage，值级）；
 4. 多角色共存 demo（sharedBus 已预留，值级可先跑）；
 5. 长期记忆向量化（把 long-term-memory 换成 embedding 检索，值级）；

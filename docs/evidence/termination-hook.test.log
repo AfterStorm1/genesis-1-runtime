@@ -1,0 +1,4 @@
+Genesis-1 evidence: termination-hook.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+block on banned input; permanent state; case-insensitive

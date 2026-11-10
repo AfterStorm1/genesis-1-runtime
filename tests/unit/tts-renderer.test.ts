@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createTtsSpeechRenderer } from "../../adapters/renderers/tts-speech-renderer";
 import type { Speaker } from "../../adapters/tts/sapi-speaker";
 import { createFeedbackChannel } from "../../core/feedback/feedback-channel-impl";
-import { createFakeClock, samplePersona } from "../helpers/fixtures";
+import { createFakeClock, samplePersona, waitForTruthy } from "../helpers/fixtures";
 import { markSanitized } from "../../core/contract/speech";
 import type { ExpressionSignal } from "../../core/contract/expression";
 import { EXPRESSION_CONTRACT_VERSION } from "../../core/contract/expression";
@@ -84,7 +84,7 @@ describe("tts speech renderer", () => {
     expect(events[0]?.signalId).toBe("rt:t:l3:1");
     expect(speaker.speaks).toEqual(["坐吧"]); // L4 只读 sanitizedText.text
     speaker.resolveNext();
-    await vi.waitFor(() => events.some((e) => e.kind === "audio_done"));
+    expect(await waitForTruthy(() => events.some((e) => e.kind === "audio_done"))).toBe(true);
     expect(events[1]?.kind).toBe("audio_done");
     r.dispose();
   });
@@ -98,7 +98,7 @@ describe("tts speech renderer", () => {
     await r.mount(makeCtx(fb));
     r.apply(signalWith("坐吧"));
     speaker.rejectNext(new Error("sapi_exit_1"));
-    await vi.waitFor(() => events.some((e) => e.kind === "signal_error"));
+    expect(await waitForTruthy(() => events.some((e) => e.kind === "signal_error"))).toBe(true);
     const err = events.find((e) => e.kind === "signal_error") as Extract<RendererFeedback, { kind: "signal_error" }>;
     expect(err.error).toContain("sapi_exit_1");
     r.dispose();

@@ -1,0 +1,4 @@
+Genesis-1 evidence: speech-postprocess.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+filter table; trailing punct; leading en-en; re-brand

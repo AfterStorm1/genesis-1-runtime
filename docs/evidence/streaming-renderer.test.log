@@ -1,0 +1,4 @@
+Genesis-1 evidence: streaming-renderer.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+char/sentence pacing; dispose cancels; busy guard; whenIdle
