@@ -106,7 +106,7 @@ async function httpPost(
   params: Record<string, unknown>,
   token?: string,
 ): Promise<void> {
-  await fetch(`${httpBase}${action}`, {
+  const res = await fetch(`${httpBase}${action}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -114,6 +114,10 @@ async function httpPost(
     },
     body: JSON.stringify(params),
   });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`onebot_http_${res.status}: ${body.slice(0, 200)}`);
+  }
 }
 
 /** 启动 QQ 群机器人（正向 WS 长连，自动重连；SIGINT 时释放全部运行时） */
