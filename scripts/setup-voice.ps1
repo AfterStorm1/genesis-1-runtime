@@ -25,11 +25,43 @@ function Download-File([string]$Url, [string]$Out, [string[]]$Fallbacks) {
   throw "下载失败：" + $Url
 }
 
-# 1. whisper.cpp 预编译包（含 whisper-cli.exe / whisper-stream.exe），v1.7.5
+# 0. 自动发现 whisper.cpp 预编译包的真实下载地址
+function Find-WhisperAssetUrl() {
+  # 方式一：GitHub API 列最新 release 资源（不依赖版本号）
+  foreach ($api in @("https://api.github.com/repos/ggml-org/whisper.cpp/releases/latest")) {
+    try {
+      $rel = Invoke-RestMethod -Uri $api -TimeoutSec 60 -Headers @{ "User-Agent" = "genesis-setup" }
+      foreach ($a in $rel.assets) {
+        if ($a.name -like "whisper-bin*.zip") { Write-Host "  发现资源：" $a.name; return $a.browser_download_url }
+      }
+      Write-Host "  最新 release 无 whisper-bin*.zip 资源，改用候选版本…"
+    } catch {
+      Write-Host ("  API 查询失败（" + $_.Exception.Message + "），改用候选版本…")
+    }
+  }
+  # 方式二：候选版本与资源名逐个探测
+  foreach ($v in @("v1.7.5", "v1.7.4", "v1.7.3", "v1.7.2", "v1.7.1", "v1.7.0", "v1.6.2")) {
+    foreach ($name in @("whisper-bin-x64.zip", "whisper-bin-x64-$v.zip")) {
+      $url = "https://github.com/ggml-org/whisper.cpp/releases/download/$v/$name"
+      try {
+        $r = Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 30
+        if ($r.StatusCode -eq 200) { Write-Host "  发现资源：" $url; return $url }
+      } catch { }
+    }
+  }
+  return $null
+}
+
+# 1. whisper.cpp 预编译包（含 whisper-cli.exe / whisper-stream.exe）
 $WZip = Join-Path $Tmp "whisper.zip"
 Write-Host "== 1/3 whisper.cpp =="
-Download-File "https://github.com/ggml-org/whisper.cpp/releases/download/v1.7.5/whisper-bin-x64.zip" $WZip @(
-  "https://mirror.ghproxy.com/https://github.com/ggml-org/whisper.cpp/releases/download/v1.7.5/whisper-bin-x64.zip"
+$wUrl = Find-WhisperAssetUrl
+if ($null -eq $wUrl) {
+  throw "找不到 whisper.cpp 下载地址。请手动到 https://github.com/ggml-org/whisper.cpp/releases 下载 whisper-bin-x64.zip，解压出 whisper-cli.exe 与 whisper-stream.exe 放入 tools\whisper\ 后重新运行本脚本。"
+}
+Download-File $wUrl $WZip @(
+  ("https://ghfast.top/" + $wUrl),
+  ("https://mirror.ghproxy.com/" + $wUrl)
 )
 Expand-Archive -Path $WZip -DestinationPath (Join-Path $Tmp "whisper") -Force
 $cli = Get-ChildItem -Path (Join-Path $Tmp "whisper") -Recurse -Filter "whisper-cli.exe" | Select-Object -First 1
