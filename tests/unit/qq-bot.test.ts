@@ -1,4 +1,7 @@
 // QQ 群机器人宿主：事件解析/触发判定/清洗/分条（纯逻辑测试；WS/HTTP 需真实 OneBot 服务）
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   extractCqFile,

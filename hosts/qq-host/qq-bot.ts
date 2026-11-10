@@ -47,7 +47,9 @@ interface OneBotGroupEvent {
   user_id?: number;
   self_id?: number;
   raw_message?: string;
-  message?: string | Array<{ type?: string; data?: { qq?: string | number; text?: string } }>;
+  message?:
+    | string
+    | Array<{ type?: string; data?: { qq?: string | number; text?: string; file?: string; path?: string; url?: string } }>;
 }
 
 /** 是否群消息事件（导出供测试） */
