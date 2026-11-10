@@ -16,8 +16,8 @@ async function main(): Promise<void> {
     const p = engine.probe();
     // eslint-disable-next-line no-console
     console.log(
-      `[stt] 后端: ${p.mode}（bin=whisper.cpp 二进制 / py=faster-whisper Python / none=未安装）` +
-        ` | whisper-cli: ${p.whisper ? "OK" : "缺"} | whisper-stream: ${p.stream ? "OK" : "缺"}` +
+      `[stt] 后端: ${p.mode}（cloud=云端API / bin=whisper.cpp / py=faster-whisper / none=未安装）` +
+        ` | 云端: ${p.cloud ? "OK(key)" : "缺"} | whisper-cli: ${p.whisper ? "OK" : "缺"} | whisper-stream: ${p.stream ? "OK" : "缺"}` +
         ` | 模型: ${p.model ? "OK" : "缺"} | ffmpeg: ${p.ffmpeg ? "OK" : "缺"} | python: ${p.python ? "OK" : "缺"}`,
     );
     for (const h of p.hints) {

@@ -10,6 +10,7 @@ import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import type { EngineProbe, StreamHandle, TranscriberCore, Utterance } from "./transcriber-core";
 import type { VoiceSource } from "./voice-source";
+import { createCloudTranscriber, probeCloud, resolveCloudConfig } from "./cloud-transcriber";
 
 export const WHISPER_DOWNLOAD_HINTS = {
   whisper:
@@ -27,8 +28,8 @@ export interface WhisperEngineOptions {
   ffmpegBin?: string;
   /** Python 后端（faster-whisper）解释器路径，默认 tools/whisper-py/Scripts/python.exe */
   pythonExe?: string;
-  /** 强制后端："bin" / "py" / "auto"（默认 auto） */
-  mode?: "bin" | "py" | "auto";
+  /** 强制后端："bin" / "py" / "cloud" / "auto"（默认 auto） */
+  mode?: "bin" | "py" | "cloud" | "auto";
   /** 识别语言，默认 zh */
   lang?: string;
   /** 流模式线程数（默认 4，仅 bin 后端） */
@@ -47,13 +48,13 @@ export function resolveEnginePaths(opts?: WhisperEngineOptions): WhisperEngineOp
     modelPath: opts?.modelPath ?? process.env.WHISPER_MODEL ?? path.join(toolsDir(), "whisper", "ggml-small.bin"),
     ffmpegBin: opts?.ffmpegBin ?? process.env.FFMPEG_BIN ?? path.join(toolsDir(), "ffmpeg", "ffmpeg.exe"),
     pythonExe: opts?.pythonExe ?? process.env.WHISPER_PYTHON ?? path.join(toolsDir(), "whisper-py", "Scripts", "python.exe"),
-    mode: opts?.mode ?? (process.env.WHISPER_MODE as "bin" | "py" | "auto" | undefined) ?? "auto",
+    mode: opts?.mode ?? (process.env.WHISPER_MODE as "bin" | "py" | "cloud" | "auto" | undefined) ?? "auto",
     lang: opts?.lang ?? process.env.WHISPER_LANG ?? "zh",
     threads: opts?.threads ?? (Number(process.env.WHISPER_THREADS) || 4),
   };
 }
 
-/** 引擎安装探测（导出供测试）；双后端：whisper.cpp 二进制 / faster-whisper Python */
+/** 引擎安装探测（导出供测试）；三后端：云端 API / whisper.cpp 二进制 / faster-whisper Python */
 export function probeEngine(opts?: WhisperEngineOptions): EngineProbe {
   const p = resolveEnginePaths(opts);
   const whisper = p.whisperBin !== undefined && fs.existsSync(p.whisperBin);
@@ -64,15 +65,24 @@ export function probeEngine(opts?: WhisperEngineOptions): EngineProbe {
   const sttPy = fs.existsSync(path.join(process.cwd(), "scripts", "whisper-stt.py"));
   const binOk = whisper && stream && model && ffmpeg;
   const pyOk = python && sttPy;
-  const mode: EngineProbe["mode"] = p.mode === "bin" ? (binOk ? "bin" : "none") : p.mode === "py" ? (pyOk ? "py" : "none") : binOk ? "bin" : pyOk ? "py" : "none";
+  const cloudOk = resolveCloudConfig().key !== undefined;
+  const mode: EngineProbe["mode"] =
+    p.mode === "bin" ? (binOk ? "bin" : "none")
+    : p.mode === "py" ? (pyOk ? "py" : "none")
+    : p.mode === "cloud" ? (cloudOk ? "cloud" : "none")
+    : cloudOk ? "cloud" // 自动：有云 key 优先云（质量最好），其次本地二进制，最后 Python
+    : binOk ? "bin"
+    : pyOk ? "py"
+    : "none";
   const hints: string[] = [];
   if (mode === "none") {
+    hints.push(probeCloud().hints[0] ?? "");
     hints.push(WHISPER_DOWNLOAD_HINTS.whisper);
     hints.push(WHISPER_DOWNLOAD_HINTS.model);
     hints.push(WHISPER_DOWNLOAD_HINTS.ffmpeg);
     hints.push("或改用 Python 后端：装 Python 后运行 setup-voice.cmd（会自动安装 faster-whisper，经清华 pip 镜像 + hf-mirror 模型镜像）");
   }
-  return { ok: mode !== "none", mode, whisper, stream, model, ffmpeg, python, hints };
+  return { ok: mode !== "none", mode, cloud: cloudOk, whisper, stream, model, ffmpeg, python, hints };
 }
 
 /** ffmpeg 转码参数（导出供测试） */
@@ -137,6 +147,10 @@ export function createWhisperCppEngine(opts?: WhisperEngineOptions): WhisperCppE
       if (source.filePath === undefined || !fs.existsSync(source.filePath)) {
         throw new Error(`音频文件不存在：${source.filePath ?? "（未提供路径）"}`);
       }
+      // 云端后端：OpenAI 兼容 /audio/transcriptions（SiliconFlow 等，质量最好）
+      if (probe.mode === "cloud") {
+        return createCloudTranscriber().transcribeFile(source);
+      }
       // Python 后端：faster-whisper（模型首次使用时自动下载）
       if (probe.mode === "py") {
         const r = await runQuiet(
@@ -169,6 +183,10 @@ export function createWhisperCppEngine(opts?: WhisperEngineOptions): WhisperCppE
         // eslint-disable-next-line no-console
         console.warn("[stt] 流式引擎未安装：" + probe.hints.join(" "));
         return null;
+      }
+      // 云端后端暂不支持实时流（文件转写走云，持续识别走本地）
+      if (probe.mode === "cloud") {
+        return createCloudTranscriber().transcribeStream(source, onUtterance);
       }
       // Python 后端：faster-whisper + sounddevice 块式连续转写
       if (probe.mode === "py") {

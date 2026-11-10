@@ -9,3 +9,7 @@ rem ---- optional: fix persona ----
 rem set "GENESIS_PERSONA=config\persona\kaguya.persona.json"
 rem ---- optional: local ollama overrides (used when LLM_API_KEY is empty) ----
 rem set "OLLAMA_MODEL=qwen3:8b"
+rem ---- optional: cloud STT (voice transcription via SiliconFlow, OpenAI-compatible) ----
+rem set "STT_CLOUD_KEY=sk-paste-siliconflow-key"
+rem set "STT_CLOUD_BASE_URL=https://api.siliconflow.cn/v1"
+rem set "STT_CLOUD_MODEL=FunAudioLLM/SenseVoiceSmall"

@@ -16,8 +16,10 @@ export interface StreamHandle {
 export interface EngineProbe {
   /** 某后端就绪 */
   ok: boolean;
-  /** 当前生效后端：bin（whisper.cpp 二进制）/ py（faster-whisper Python）/ none */
-  mode: "bin" | "py" | "none";
+  /** 当前生效后端：cloud（云端 API）/ bin（whisper.cpp 二进制）/ py（faster-whisper Python）/ none */
+  mode: "cloud" | "bin" | "py" | "none";
+  /** 云端转写已配置（STT_CLOUD_KEY） */
+  cloud: boolean;
   /** 文件转写（whisper-cli.exe）可用 */
   whisper: boolean;
   /** 流式转写（whisper-stream.exe）可用 */
