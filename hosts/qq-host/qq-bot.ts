@@ -151,6 +151,21 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     if (!isGroupMessage(ev) || ev.group_id === undefined || ev.self_id === undefined) return;
     const groupId = String(ev.group_id);
 
+    // 终止状态只提示一次（避免刷屏）
+    const terminatedLogged = new Set<string>();
+    const logTerminated = (gid: string): void => {
+      if (!terminatedLogged.has(gid)) {
+        terminatedLogged.add(gid);
+        // eslint-disable-next-line no-console
+        console.log(`[qq-bot] 群 ${gid} 已因红线终止互动，不再回应（重启 qq-chat.cmd 可重置）`);
+      }
+    };
+
+    // 可见日志：每条群消息都显示是否到达（排查用；30 字截断）
+    const rawPreview = stripCqCodes(ev.raw_message ?? "").slice(0, 30) || "（非文本/空）";
+    // eslint-disable-next-line no-console
+    console.log(`[qq-bot] 收到 群${groupId}: ${rawPreview}`);
+
     // —— 语音消息：群里发语音 → 转写 → 按文本回复（无需 @/触发词，避免漏听）——
     const recordFile = extractCqFile(ev.raw_message ?? "", "record");
     if (recordFile !== null && recordFile !== "") {
@@ -160,7 +175,10 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         if (now - last < config.cooldownMs) return;
         lastReplyAt.set(groupId, now);
         const chat = await runtimeFor(groupId);
-        if (chat.guard.terminated) return;
+        if (chat.guard.terminated) {
+          logTerminated(groupId);
+          return;
+        }
         try {
           const heard = await sttEngine.transcribeFile(fileSource(recordFile, `qq-${groupId}`));
           if (heard.trim() === "") return;
@@ -185,14 +203,24 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     }
 
     const text = extractUserText(ev, ev.self_id, config.trigger);
-    if (text === null) return;
+    if (text === null) {
+      // 可见日志：文本消息未触发（不是 @ 也没触发词开头）
+      if (!/[CQ:image|CQ:face|CQ:at/.test(ev.raw_message ?? "")) {
+        // eslint-disable-next-line no-console
+        console.log(`[qq-bot] 未触发 群${groupId}：需要 @机器人 或以“${config.trigger}”开头`);
+      }
+      return;
+    }
     enqueue(groupId, async () => {
       const now = Date.now();
       const last = lastReplyAt.get(groupId) ?? 0;
       if (now - last < config.cooldownMs) return; // 冷却
       lastReplyAt.set(groupId, now);
       const chat = await runtimeFor(groupId);
-      if (chat.guard.terminated) return; // 终止状态：该群不再回应
+      if (chat.guard.terminated) {
+        logTerminated(groupId);
+        return; // 终止状态：该群不再回应
+      }
       const { text: reply } = await sendUserMessage(chat, text);
       if (reply === null || reply === "") return;
       for (const chunk of splitForSend(reply, config.maxReplyLen)) {
