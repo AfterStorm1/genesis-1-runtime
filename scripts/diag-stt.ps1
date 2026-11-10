@@ -14,7 +14,7 @@ try {
 
 Write-Host "=== 2. 默认录音设备 ==="
 try {
-  $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine((New-Object System.Globalization.CultureInfo('zh-CN')))
+  $r = [System.Speech.Recognition.SpeechRecognitionEngine]::new([System.Globalization.CultureInfo]::new('zh-CN'))
   $r.SetInputToDefaultAudioDevice()
   Write-Host "  OK：默认音频输入可用"
 } catch {
@@ -28,7 +28,7 @@ try {
   $r.InitialSilenceTimeout = [TimeSpan]::FromSeconds(2)
   $r.BabbleTimeout = [TimeSpan]::FromSeconds(6)
   $r.EndSilenceTimeout = [TimeSpan]::FromSeconds(1.5)
-  $r.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar()))
+  $r.LoadGrammar([System.Speech.Recognition.DictationGrammar]::new())
   $res = $r.Recognize()
   if ($res) { Write-Host ("  识别结果：" + $res.Text) } else { Write-Host "  没听清（超时），麦克风可能有声音但识别不到，检查输入音量" }
 } catch {
