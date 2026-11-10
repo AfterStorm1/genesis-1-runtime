@@ -123,6 +123,25 @@ export function buildRecordArgs(pythonExe: string, outPath: string, seconds: num
   };
 }
 
+/** 转码参数（导出供测试）：venv python → whisper-stt.py convert in --out wav */
+export function buildConvertArgs(pythonExe: string, inPath: string, outPath: string): { cmd: string; args: string[] } {
+  return {
+    cmd: pythonExe,
+    args: [path.join(process.cwd(), "scripts", "whisper-stt.py"), "convert", inPath, "--out", outPath],
+  };
+}
+
+/** 任意音频转 16k wav（QQ amr/silk 等云 API 不收的格式先用本地转码） */
+export async function convertToWav16k(inputPath: string, outPath: string): Promise<void> {
+  const paths = resolveEnginePaths();
+  if (paths.pythonExe === undefined || !fs.existsSync(paths.pythonExe)) {
+    throw new Error("转码组件未安装（请先运行 setup-voice.cmd）");
+  }
+  const { cmd, args } = buildConvertArgs(paths.pythonExe, inputPath, outPath);
+  const r = await runQuiet(cmd, args);
+  if (r.code !== 0) throw new Error(`转码失败(code ${r.code}): ${r.out.slice(-300)}`);
+}
+
 /** 项目内临时目录（规避用户 Temp 目录的 ACL 权限问题） */
 export function runtimeTmpDir(): string {
   const dir = path.join(process.cwd(), "data", "tmp");
@@ -176,7 +195,19 @@ export function createWhisperCppEngine(opts?: WhisperEngineOptions): WhisperCppE
       }
       // 云端后端：OpenAI 兼容 /audio/transcriptions（SiliconFlow 等，质量最好）
       if (probe.mode === "cloud") {
-        return createCloudTranscriber().transcribeFile(source);
+        // 云 API 只收标准格式：amr/silk 先本地转 16k wav（转码失败则原文件直传兜底）
+        let target = source.filePath;
+        if (/\.(amr|silk|slk|ogg|opus)$/i.test(target)) {
+          const wavOut = path.join(runtimeTmpDir(), `${Date.now()}-conv.wav`);
+          try {
+            await convertToWav16k(target, wavOut);
+            target = wavOut;
+          } catch (convErr) {
+            // eslint-disable-next-line no-console
+            console.warn(`[stt] 转码失败，尝试原格式直传：${convErr instanceof Error ? convErr.message : String(convErr)}`);
+          }
+        }
+        return createCloudTranscriber().transcribeFile({ ...source, filePath: target });
       }
       // Python 后端：faster-whisper（模型首次使用时自动下载）
       if (probe.mode === "py") {

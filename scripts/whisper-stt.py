@@ -36,10 +36,30 @@ def _transcribe_kwargs() -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["file", "stream", "record"])
+    ap.add_argument("mode", choices=["file", "stream", "record", "convert"])
     ap.add_argument("path", nargs="?")
+    ap.add_argument("--out", default=None)
     ap.add_argument("--model-size", default=os.environ.get("WHISPER_MODEL_SIZE", "base"))
     args = ap.parse_args()
+
+    # convert：任意音频（amr/silk/mp3…）→ 16k 单声道 wav（云端 API 只收标准格式）
+    if args.mode == "convert":
+        if not args.path or not args.out:
+            print("convert 需要 path 与 --out", file=sys.stderr)
+            sys.exit(2)
+        import wave
+
+        import numpy as np
+        from faster_whisper.audio import decode_audio
+
+        audio = decode_audio(args.path)  # 已是 16k 单声道 float32
+        with wave.open(args.out, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(16000)
+            w.writeframes((audio * 32767).astype(np.int16).tobytes())
+        print("[stt] 转换完成", flush=True)
+        return
 
     # record：默认麦克风录音 N 秒存为 16k wav（供 /说 与云端转写配合）
     if args.mode == "record":
