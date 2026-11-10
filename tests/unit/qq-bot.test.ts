@@ -37,6 +37,19 @@ describe("qq bot (onebot 11 parsing)", () => {
     expect(extractUserText({ ...ev, raw_message: "今天天气不错" }, 100, "蕙")).toBeNull();
   });
 
+  it("字面 @（纯文本，无 CQ at 段）也视为提及", () => {
+    const ev = {
+      post_type: "message",
+      message_type: "group",
+      group_id: 123,
+      self_id: 100,
+      raw_message: "@蕙 理我一下",
+    };
+    expect(extractUserText(ev, 100, "蕙")).toBe("理我一下");
+    expect(extractUserText({ ...ev, raw_message: "@ 蕙 在吗" }, 100, "蕙")).toBe("在吗");
+    expect(extractUserText({ ...ev, raw_message: "@别人 在吗" }, 100, "蕙")).toBeNull(); // 不是 @ 她
+  });
+
   it("stripCqCodes：清掉图片/表情等 CQ 码", () => {
     expect(stripCqCodes("看这个[CQ:image,file=abc]图 [CQ:face,id=1]")).toBe("看这个图");
   });

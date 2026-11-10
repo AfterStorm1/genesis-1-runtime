@@ -75,15 +75,15 @@ export function extractUserText(ev: OneBotGroupEvent, selfId: number, trigger: s
   const raw = ev.raw_message ?? (Array.isArray(ev.message) ? ev.message.map((m) => m.data?.text ?? "").join("") : ev.message ?? "");
   const mentioned =
     Array.isArray(ev.message) && ev.message.some((m) => m.type === "at" && String(m.data?.qq) === String(selfId));
-  let text: string;
-  if (mentioned) {
-    text = stripCqCodes(raw);
-  } else if (raw.trim().startsWith(trigger)) {
-    text = raw.trim().slice(trigger.length);
-  } else {
-    return null;
+  let body = stripCqCodes(raw).trim();
+  if (body === "") return null;
+  if (!mentioned) {
+    // 字面 @（有些客户端 @ 只产生纯文本）也视为提及；否则必须是触发词开头
+    body = body.replace(/^[@＠]\s*/, "");
+    if (!body.startsWith(trigger)) return null;
+    body = body.slice(trigger.length);
   }
-  text = stripCqCodes(text);
+  const text = stripCqCodes(body).trim();
   return text === "" ? null : text;
 }
 
