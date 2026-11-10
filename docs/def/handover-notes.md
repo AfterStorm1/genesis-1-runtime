@@ -29,6 +29,9 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 8. 主角「蕙」已录入：人格卡 `config/persona/hui.persona.json`、规则 `config/world/hui-rules.md`；
    语言过滤表后处理 `adapters/llm/speech-postprocess.ts`（不进 prompt）；最高优先级终止规则
    `adapters/safety-guard/termination-hook.ts`（PipelineHook 输入侧强制，越界后永久只回“连接中断...”）。
+9. 流式输出（渲染层）：`adapters/llm/speech-segmenter.ts` 切分 + `adapters/renderers/streaming-text-renderer.ts`
+   打字机打印（默认开启；CHAT_STREAM=0 关闭，CHAT_CHAR_DELAY/CHAT_SENTENCE_DELAY 调节奏）。
+   真·token 级提前输出为形状级演进（见 deviations D-23）。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 

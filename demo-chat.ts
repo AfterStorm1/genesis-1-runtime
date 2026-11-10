@@ -16,6 +16,8 @@
 //   CHAT_WORLD_RULES   世界观/任务/对话偏向规则文件（默认 config/world/hui-rules.md）
 //   CHAT_EXTRA_SYSTEM  直接追加一行/一段 system 规则（与 CHAT_WORLD_RULES 合并）
 //   CHAT_TEMPERATURE   采样温度（默认 0.7；低=稳重，高=跳脱）
+//   CHAT_STREAM        流式输出开关（默认 1 开启；0 回退整段打印）
+//   CHAT_CHAR_DELAY    流式逐字延迟 ms（默认 25）  CHAT_SENTENCE_DELAY 句间延迟 ms（默认 300）
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
@@ -34,6 +36,7 @@ import type { Summarizer } from "./adapters/llm/summarizer";
 import { createTerminationHook } from "./adapters/safety-guard/termination-hook";
 import type { TerminationHook } from "./adapters/safety-guard/termination-hook";
 import { createMockSpeechRenderer } from "./adapters/renderers/mock-speech-renderer";
+import { createStreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
 import { createTextRenderer } from "./adapters/renderers/text-renderer";
 import type { PersonaCardV3 } from "./core/contract/persona";
 
@@ -54,6 +57,8 @@ export interface ChatRuntime {
   /** 持久化文件（JSONL） */
   historyFile: string;
   longTermFile: string;
+  /** 是否流式输出（true 时回复由渲染器逐句打印，主循环不重复打印） */
+  streamOutput: boolean;
 }
 
 export interface ChatRuntimeOptions {
@@ -125,11 +130,23 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
   // 最高优先级安全钩子：越界输入 → 永久终止互动
   const guard = createTerminationHook();
 
+  // 流式输出（默认开启）：StreamingTextRenderer 逐句打字机式打印；
+  // CHAT_STREAM=0 回退普通 TextRenderer（主循环整段打印）。
+  const streamOutput = (process.env.CHAT_STREAM ?? "1") !== "0";
+  const charDelay = Number(process.env.CHAT_CHAR_DELAY);
+  const sentenceDelay = Number(process.env.CHAT_SENTENCE_DELAY);
+  const textRenderer = streamOutput
+    ? createStreamingTextRenderer({
+        charDelayMs: Number.isFinite(charDelay) ? charDelay : 25,
+        sentenceDelayMs: Number.isFinite(sentenceDelay) ? sentenceDelay : 300,
+      })
+    : createTextRenderer();
+
   const rt = await compose({
     runtimeId: "rt:chat",
     personaId: "persona:chat",
     frameHz: 10,
-    renderers: [createTextRenderer(), createMockSpeechRenderer()],
+    renderers: [textRenderer, createMockSpeechRenderer()],
     parameters: [],
     cognition: createOpenAiCompatibleCognition({
       persona,
@@ -156,6 +173,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     online,
     historyFile,
     longTermFile,
+    streamOutput,
   };
 }
 
@@ -173,22 +191,23 @@ export function sendUserMessage(
   history.saveTurn("user", text);
   return new Promise((resolve) => {
     let settled = false;
+    const unsub = rt.arbiter.onDispatch((s) => {
+      finish(s.speech?.sanitizedText?.text ?? null, s.emotion.emotion);
+    });
+    const timer = setTimeout(() => finish(null, "neutral"), timeoutMs);
+    // 本轮触发终止钩子时不会产生回复：轮询感知，立即返回“连接中断...”
+    const poll = setInterval(() => {
+      if (guard.terminated) finish("连接中断...", "neutral");
+    }, 200);
     const finish = (textReply: string | null, emotion: string): void => {
       if (settled) return;
       settled = true;
-      if (textReply !== null) history.saveTurn("assistant", textReply);
+      clearTimeout(timer);
+      clearInterval(poll);
+      unsub();
+      if (textReply !== null && textReply !== "连接中断...") history.saveTurn("assistant", textReply);
       resolve({ text: textReply, emotion });
     };
-    const unsub = rt.arbiter.onDispatch((s) => {
-      const textReply = s.speech?.sanitizedText?.text ?? null;
-      unsub();
-      finish(textReply, s.emotion.emotion);
-    });
-    const timer = setTimeout(() => {
-      unsub();
-      finish(null, "neutral");
-    }, timeoutMs);
-    void timer;
     rt.inputBus.inject({ kind: "user_message", text });
   });
 }
@@ -250,11 +269,20 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       continue;
     }
 
+    // 流式模式：先打印名字前缀，回复由渲染器逐句打字机输出
+    if (chat.streamOutput) {
+      // eslint-disable-next-line no-console
+      console.log(`${persona.data.name} >`);
+    }
     const { text, emotion } = await sendUserMessage(chat, trimmed);
     if (text === null) {
       // eslint-disable-next-line no-console
-      console.log(`${persona.data.name} > （超时或本句只有情绪无台词）`);
-    } else {
+      console.log(chat.streamOutput ? "（超时或本句只有情绪无台词）" : `${persona.data.name} > （超时或本句只有情绪无台词）`);
+    } else if (text === "连接中断...") {
+      // 本轮触发终止：渲染器没有收到回复，由主循环输出
+      // eslint-disable-next-line no-console
+      console.log("连接中断...");
+    } else if (!chat.streamOutput) {
       // eslint-disable-next-line no-console
       console.log(`${persona.data.name} (${emotion}) > ${text}`);
     }

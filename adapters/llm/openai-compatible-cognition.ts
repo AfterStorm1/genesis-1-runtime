@@ -10,7 +10,8 @@ import type { Cognition, CognitionContext, CognitionInput, CognitionOutput } fro
 import { COGNITION_CONTRACT_VERSION } from "../../core/contract/cognition";
 import type { Logger } from "../../core/contract/pipeline-hook";
 import type { PersonaCardV3 } from "../../core/contract/persona";
-import { postprocessSpeechPayload } from "./speech-postprocess";
+import { postprocessSpeech, postprocessSpeechPayload } from "./speech-postprocess";
+import { segmentSpeech } from "./speech-segmenter";
 
 export interface OpenAiCompatibleCognitionOptions {
   /** 默认 http://localhost:11434（本地 Ollama）；在线服务填其 API 地址，如 https://api.deepseek.com */
@@ -204,8 +205,13 @@ export function createOpenAiCompatibleCognition(
       const rawIntensity = Number(reply.intensity);
       const intensity = Number.isNaN(rawIntensity) ? 0.5 : Math.min(1, Math.max(0, rawIntensity));
       if (reply.speech !== undefined && reply.speech !== "") {
-        // 输出侧后处理：语言过滤表 + 句尾标点规范化 + 起头词规则（不进 prompt）
-        const speech = postprocessSpeechPayload({ text: reply.speech, interruptible: true });
+        // 输出侧流水线：流式切分（≤25 字/语义边界）→ 逐句后处理（过滤表/句尾标点/起头词）
+        // → 以换行连接（渲染层按行流式输出）；后处理不进 prompt
+        const sentences = segmentSpeech(reply.speech)
+          .map((s) => postprocessSpeech(s))
+          .filter((s) => s !== "");
+        const text = sentences.length > 0 ? sentences.join("\n") : postprocessSpeech(reply.speech);
+        const speech = postprocessSpeechPayload({ text, interruptible: true });
         yield {
           contractVersion: COGNITION_CONTRACT_VERSION,
           kind: "emotion",
