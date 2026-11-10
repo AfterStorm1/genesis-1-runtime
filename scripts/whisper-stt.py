@@ -52,7 +52,19 @@ def main() -> None:
         import numpy as np
         from faster_whisper.audio import decode_audio
 
-        audio = decode_audio(args.path)  # 已是 16k 单声道 float32
+        audio = None
+        try:
+            audio = decode_audio(args.path)  # 已是 16k 单声道 float32
+        except Exception:
+            # QQ 语音是 silk v3（#!SILK_V3 头）：用 pilk 解码 → pcm → float32
+            import pilk
+
+            pcm_tmp = args.out + ".pcm"
+            pilk.decode(args.path, pcm_tmp, pcm_rate=16000, tencent=True)
+            with open(pcm_tmp, "rb") as f:
+                pcm = f.read()
+            os.remove(pcm_tmp)
+            audio = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
         with wave.open(args.out, "wb") as w:
             w.setnchannels(1)
             w.setsampwidth(2)
