@@ -6,7 +6,7 @@ import {
   createOpenAiCompatibleCognition,
   parseReply,
 } from "../../adapters/llm/openai-compatible-cognition";
-import { parseMemoryLines } from "../../adapters/llm/summarizer";
+import { parseMemoryLines, parseFeelings } from "../../adapters/llm/summarizer";
 import { samplePersona } from "../helpers/fixtures";
 import { COGNITION_CONTRACT_VERSION } from "../../core/contract/cognition";
 import type { CognitionInput, CognitionOutput } from "../../core/contract/cognition";
@@ -141,12 +141,38 @@ describe("llm adapter messages", () => {
     expect(msgs[0]!.content).not.toContain("用户叫小明\n- 用户叫小明"); // 不重复
   });
 
+  it("第一人称感受条目（role=feeling）注入 system 且排在事实之前", () => {
+    const msgs = buildMessages(
+      userInput("你好", {
+        items: [
+          { role: "feeling", content: "calm：一起修书很安静，我有点喜欢" },
+          { role: "memory", content: "用户叫小明" },
+        ],
+      }),
+      persona,
+    );
+    expect(msgs[0]!.content).toContain("[记忆中的感受——第一人称]");
+    expect(msgs[0]!.content).toContain("一起修书很安静");
+    const feelIdx = msgs[0]!.content.indexOf("[记忆中的感受");
+    const memIdx = msgs[0]!.content.indexOf("[长期记忆");
+    expect(feelIdx).toBeGreaterThan(-1);
+    expect(memIdx).toBeGreaterThan(feelIdx); // 感受块在事实块之前
+  });
+
   it("摘要器输出解析：每行一条、去前缀、忽略空行与「无」", () => {
     expect(parseMemoryLines("- 用户喜欢咖啡\n* 约定周三见面\n\n无")).toEqual([
       "用户喜欢咖啡",
       "约定周三见面",
     ]);
     expect(parseMemoryLines("没有")).toEqual([]);
+  });
+
+  it("感受节解析：「情绪词：内容」逐条；无前缀按 neutral；「无」忽略", () => {
+    expect(parseFeelings("- calm：一起修书很安静\n- 有点开心\n\n无")).toEqual([
+      { emotion: "calm", text: "一起修书很安静" },
+      { emotion: "neutral", text: "有点开心" },
+    ]);
+    expect(parseFeelings("没有")).toEqual([]);
   });
 
   it("写入 llm-adapter 证据产物", () => {

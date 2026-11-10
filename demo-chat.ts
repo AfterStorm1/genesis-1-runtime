@@ -34,6 +34,8 @@ import type { InMemoryHistoryStore } from "./adapters/llm/in-memory-history-stor
 import { createLongTermMemory } from "./adapters/llm/long-term-memory";
 import type { LongTermMemory } from "./adapters/llm/long-term-memory";
 import { createChatMemory } from "./adapters/llm/chat-memory";
+import { createFeelingMemory } from "./adapters/llm/feeling-memory";
+import type { FeelingMemory } from "./adapters/llm/feeling-memory";
 import { createSummarizer } from "./adapters/llm/summarizer";
 import type { Summarizer } from "./adapters/llm/summarizer";
 import { createTerminationHook } from "./adapters/safety-guard/termination-hook";
@@ -57,7 +59,9 @@ export interface ChatRuntime {
   history: InMemoryHistoryStore;
   /** 长期记忆库（带遗忘机制） */
   longTerm: LongTermMemory;
-  /** 摘要器（把轮次提炼成长记忆） */
+  /** 第一人称感受库（感受会随时间变淡） */
+  feelings: FeelingMemory;
+  /** 摘要器（把轮次提炼成事实+感受） */
   summarizer: Summarizer;
   /** 终止互动钩子（最高优先级安全规则） */
   guard: TerminationHook;
@@ -113,8 +117,11 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     maxEntries: Number(process.env.CHAT_MEMORY_MAX ?? 50) || 50,
     ttlDays: Number(process.env.CHAT_MEMORY_TTL_DAYS ?? 30),
   });
-  // 组合记忆：pipeline 的 recall 一次返回「长期记忆条目 + 最近轮次」
-  const memory = createChatMemory({ turns: history, longTerm });
+  // 第一人称感受库：容量 20、TTL 14 天、强度逐日衰减（感受会淡）
+  const feelingFile = path.join(historyDir, `${persona.data.name}.feelings.jsonl`);
+  const feelings = createFeelingMemory({ filePath: feelingFile });
+  // 组合记忆：pipeline 的 recall 一次返回「感受条目 + 长期记忆条目 + 最近轮次」
+  const memory = createChatMemory({ turns: history, longTerm, feelings });
   const summarizer = createSummarizer({ baseUrl, model, apiKey });
 
   // 世界观/规则注入：CHAT_WORLD_RULES（文件）+ CHAT_EXTRA_SYSTEM（文本）合并进 system 提示词；
@@ -202,6 +209,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     persona,
     history,
     longTerm,
+    feelings,
     summarizer,
     guard,
     model,
@@ -310,20 +318,33 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       continue;
     }
 
-    // —— 显式遗忘命令（遗忘机制入口 3）——
+    // —— 显式遗忘命令（事实与感受一起遗忘）——
     if (trimmed.startsWith("/忘记 ")) {
-      const n = longTerm.forget(trimmed.slice("/忘记 ".length));
+      const kw = trimmed.slice("/忘记 ".length);
+      const nFacts = longTerm.forget(kw);
+      const nFeel = chat.feelings.forget(kw);
       // eslint-disable-next-line no-console
-      console.log(`已遗忘 ${n} 条相关记忆（归档可回滚：longTerm.restoreArchived()）`);
+      console.log(`已遗忘事实 ${nFacts} 条、感受 ${nFeel} 条（归档可回滚）`);
       continue;
     }
     if (trimmed === "/记忆") {
-      const items = longTerm.list().filter((e) => e.archived !== true);
-      if (items.length === 0) {
+      const facts = longTerm.list().filter((e) => e.archived !== true);
+      const feels = chat.feelings.list().filter((e) => e.archived !== true);
+      if (feels.length > 0) {
+        // eslint-disable-next-line no-console
+        console.log("— 记忆中的感受 —");
+        for (const e of feels) {
+          // eslint-disable-next-line no-console
+          console.log(`  · (${e.emotion}, 浓度${e.intensity.toFixed(2)}) ${e.text}`);
+        }
+      }
+      if (facts.length === 0 && feels.length === 0) {
         // eslint-disable-next-line no-console
         console.log("（还没有长期记忆。多聊几轮，我会自动提炼。）");
       } else {
-        for (const e of items) {
+        // eslint-disable-next-line no-console
+        console.log("— 记住的事实 —");
+        for (const e of facts) {
           // eslint-disable-next-line no-console
           console.log(`  · [重要度${e.importance}] ${e.text}`);
         }
@@ -387,11 +408,13 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
         .map((i) => `${i.role === "user" ? "用户" : persona.data.name}：${i.content}`)
         .join("\n");
       try {
-        const items = await chat.summarizer.summarize(recent);
-        for (const t of items) longTerm.add(t);
-        const nowActive = longTerm.list().filter((e) => e.archived !== true).length;
+        const { facts, feelings } = await chat.summarizer.summarize(recent);
+        for (const t of facts) longTerm.add(t);
+        for (const f of feelings) chat.feelings.add(f.text, f.emotion);
+        const nowFacts = longTerm.list().filter((e) => e.archived !== true).length;
+        const nowFeels = chat.feelings.list().filter((e) => e.archived !== true).length;
         // eslint-disable-next-line no-console
-        console.log(`[memory] 新增 ${items.length} 条长期记忆（现存 ${nowActive} 条）`);
+        console.log(`[memory] 新增事实 ${facts.length} 条 + 感受 ${feelings.length} 条（现存 事实${nowFacts}/感受${nowFeels}）`);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.log(`[memory] 提炼失败：${err instanceof Error ? err.message : String(err)}`);

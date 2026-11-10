@@ -100,23 +100,29 @@ export function buildSystemPrompt(persona: PersonaCardV3, extra?: string): strin
     .join("\n");
 }
 
-/** 组装消息：system（含长期记忆块）→ 短期历史轮次 → 当前输入（导出供测试） */
+/** 组装消息：system（含感受层 + 长期记忆块）→ 短期历史轮次 → 当前输入（导出供测试） */
 export function buildMessages(
   input: CognitionInput,
   persona: PersonaCardV3,
   extraSystemPrompt?: string,
 ): Array<{ role: string; content: string }> {
   const recallItems = input.recall?.items ?? [];
-  // 长期记忆条目（role="memory"，由长期记忆库提供）并入 system 提示词
+  // 第一人称感受条目（role="feeling"）——排最前，先定情绪基调
+  const feelingItems = recallItems.filter((i) => i.role === "feeling");
+  // 长期记忆事实条目（role="memory"）
   const memoryItems = recallItems.filter((i) => i.role === "memory");
   // 短期历史轮次按对话顺序注入
-  const turnItems = recallItems.filter((i) => i.role !== "memory");
+  const turnItems = recallItems.filter((i) => i.role !== "memory" && i.role !== "feeling");
+  const feelingBlock =
+    feelingItems.length > 0
+      ? `\n\n[记忆中的感受——第一人称]\n${feelingItems.map((i) => `- ${i.content}`).join("\n")}`
+      : "";
   const memoryBlock =
     memoryItems.length > 0
       ? `\n\n[长期记忆——你们之间值得记住的事]\n${memoryItems.map((i) => `- ${i.content}`).join("\n")}`
       : "";
   const messages: Array<{ role: string; content: string }> = [
-    { role: "system", content: buildSystemPrompt(persona, extraSystemPrompt) + memoryBlock },
+    { role: "system", content: buildSystemPrompt(persona, extraSystemPrompt) + feelingBlock + memoryBlock },
   ];
   for (const item of turnItems) {
     messages.push({
