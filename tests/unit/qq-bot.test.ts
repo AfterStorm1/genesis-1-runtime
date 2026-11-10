@@ -4,11 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  downloadRecord,
   extractCqFile,
   extractCqRecord,
   extractUserText,
   isGroupMessage,
   resolveRecordFile,
+  resolveRecordWithRetry,
   splitForSend,
   stripCqCodes,
 } from "../../hosts/qq-host/qq-bot";
@@ -111,7 +113,30 @@ describe("qq bot (onebot 11 parsing)", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
+  it("resolveRecordWithRetry：文件稍后落盘时轮询等到它出现", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "genesis-retry-"));
+    const target = path.join(dir, "late.amr");
+    setTimeout(() => fs.writeFileSync(target, "x"), 600);
+    const hit = await resolveRecordWithRetry({ path: target }, [dir], 3_000, 100);
+    expect(hit).toBe(target);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("downloadRecord：fetch url 写入本地（stub fetch）", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 })) as typeof fetch;
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "genesis-dl-"));
+      const out = path.join(dir, "v.amr");
+      expect(await downloadRecord("https://x/v.amr", out)).toBe(out);
+      expect(fs.readFileSync(out)).toEqual(Buffer.from([1, 2, 3]));
+      fs.rmSync(dir, { recursive: true, force: true });
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
   it("写入 qq-bot 证据产物", () => {
-    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve; chunking"], true);
+    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve/retry/download; chunking"], true);
   });
 });

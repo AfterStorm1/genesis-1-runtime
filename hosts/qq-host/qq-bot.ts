@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ChatRuntime } from "../chat-host/chat-runtime";
 import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
-import { createWhisperCppEngine } from "../../adapters/stt/whisper-engine";
+import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whisper-engine";
 import { fileSource } from "../../adapters/stt/voice-source";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
@@ -137,6 +137,31 @@ function searchFile(dir: string, name: string, depth: number): string | null {
   return null;
 }
 
+/** 轮询等待文件落盘（NapCat 事件可能先于下载完成到达）（导出供测试） */
+export async function resolveRecordWithRetry(
+  rec: RecordInfo,
+  roots: string[],
+  timeoutMs = 15_000,
+  pollMs = 300,
+): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const hit = resolveRecordFile(rec, roots);
+    if (hit !== null) return hit;
+    if (Date.now() >= deadline) return null;
+    await new Promise((r) => setTimeout(r, pollMs));
+  }
+}
+
+/** 从 QQ CDN url 下载语音到本地（路径缺失时的兜底）（导出供测试） */
+export async function downloadRecord(url: string, outPath: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`record_download_http_${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  fs.writeFileSync(outPath, buf);
+  return outPath;
+}
+
 /**
  * 从群事件提取应回复的文本：被 @ 或触发词开头才返回非 null（导出供测试）。
  * 返回值为清洗后的用户文本（去掉 @ 段与触发词）。
@@ -258,7 +283,17 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
             process.env.QQ_NAP_CAT_DIR ?? "D:\\ruanjian\\NapCat.Shell.Windows.Node",
             process.cwd(),
           ];
-          const local = resolveRecordFile(rec, roots);
+          // 1) 轮询等文件落盘（事件可能早于下载完成） 2) 兜底：从事件 url 下载
+          let local = await resolveRecordWithRetry(rec, roots);
+          if (local === null && rec.url !== undefined && rec.url !== "") {
+            const dl = path.join(runtimeTmpDir(), `${Date.now()}.amr`);
+            try {
+              local = await downloadRecord(rec.url, dl);
+            } catch (dlErr) {
+              // eslint-disable-next-line no-console
+              console.error(`[qq-bot] url 下载失败：${dlErr instanceof Error ? dlErr.message : String(dlErr)}`);
+            }
+          }
           if (local === null) {
             // eslint-disable-next-line no-console
             console.error(`[qq-bot] 语音文件定位失败，事件字段：${JSON.stringify(rec)}`);
