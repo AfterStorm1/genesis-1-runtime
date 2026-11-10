@@ -3,6 +3,7 @@
 // 群聊模式：关闭 TTS 与流式（纯文本回复）；@机器人 或以触发词开头才应答；每群冷却防刷。
 // 语音消息：群里的 [CQ:record] 自动转写（云端/本地引擎）后按文本回复。
 // 运行：qq-chat.cmd；环境变量见 hosts/qq-host 文档与 qq-chat.cmd 默认值。
+import fs from "node:fs";
 import path from "node:path";
 import type { ChatRuntime } from "../chat-host/chat-runtime";
 import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
@@ -65,6 +66,73 @@ export function stripCqCodes(text: string): string {
 export function extractCqFile(raw: string, type: string): string | null {
   const m = raw.match(new RegExp(`\\[CQ:${type},file=([^,\\]]+)`));
   return m !== null && m[1] !== undefined ? m[1].trim() : null;
+}
+
+export interface RecordInfo {
+  file?: string;
+  path?: string;
+  url?: string;
+}
+
+/** 提取语音消息的完整信息：优先 message 数组段，兜底解析 raw CQ 码（导出供测试） */
+export function extractCqRecord(ev: OneBotGroupEvent): RecordInfo | null {
+  if (Array.isArray(ev.message)) {
+    for (const m of ev.message) {
+      if (m.type === "record" && m.data !== undefined) {
+        const d = m.data as { file?: unknown; path?: unknown; url?: unknown };
+        return {
+          file: typeof d.file === "string" ? d.file : undefined,
+          path: typeof d.path === "string" ? d.path : undefined,
+          url: typeof d.url === "string" ? d.url : undefined,
+        };
+      }
+    }
+  }
+  const raw = ev.raw_message ?? "";
+  const m = raw.match(/\[CQ:record,([^\]]*)\]/);
+  if (m === null) return null;
+  const get = (k: string): string | undefined => {
+    const f = m[1]!.match(new RegExp(`(?:^|,)${k}=([^,\\]]+)`));
+    return f?.[1] ?? undefined;
+  };
+  const file = get("file");
+  return { file, path: get("path"), url: get("url") };
+}
+
+/** 在候选根目录里定位语音文件（路径优先；file 相对名逐层搜索，深度上限 6）（导出供测试） */
+export function resolveRecordFile(rec: RecordInfo, roots: string[]): string | null {
+  if (rec.path !== undefined && fs.existsSync(rec.path)) return rec.path;
+  if (rec.file !== undefined) {
+    if (path.isAbsolute(rec.file) && fs.existsSync(rec.file)) return rec.file;
+    for (const root of roots) {
+      if (!fs.existsSync(root)) continue;
+      const direct = path.join(root, rec.file);
+      if (fs.existsSync(direct)) return direct;
+    }
+    for (const root of roots) {
+      const found = searchFile(root, rec.file, 6);
+      if (found !== null) return found;
+    }
+  }
+  return null;
+}
+
+function searchFile(dir: string, name: string, depth: number): string | null {
+  if (depth <= 0 || !fs.existsSync(dir)) return null;
+  try {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        const hit = searchFile(p, name, depth - 1);
+        if (hit !== null) return hit;
+      } else if (e.name === name) {
+        return p;
+      }
+    }
+  } catch {
+    /* 无权限目录跳过 */
+  }
+  return null;
 }
 
 /**
@@ -170,9 +238,9 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     // eslint-disable-next-line no-console
     console.log(`[qq-bot] 收到 群${groupId}: ${rawPreview}`);
 
-    // —— 语音消息：群里发语音 → 转写 → 按文本回复（无需 @/触发词，避免漏听）——
-    const recordFile = extractCqFile(ev.raw_message ?? "", "record");
-    if (recordFile !== null && recordFile !== "") {
+    // —— 语音消息：群里发语音 → 定位文件（path 优先，file 相对名在 NapCat 目录内搜索）→ 转写 → 按文本回复 ——
+    const rec = extractCqRecord(ev);
+    if (rec !== null) {
       enqueue(groupId, async () => {
         const now = Date.now();
         const last = lastReplyAt.get(groupId) ?? 0;
@@ -184,7 +252,17 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           return;
         }
         try {
-          const heard = await sttEngine.transcribeFile(fileSource(recordFile, `qq-${groupId}`));
+          const roots = [
+            process.env.QQ_NAP_CAT_DIR ?? "D:\\ruanjian\\NapCat.Shell.Windows.Node",
+            process.cwd(),
+          ];
+          const local = resolveRecordFile(rec, roots);
+          if (local === null) {
+            // eslint-disable-next-line no-console
+            console.error(`[qq-bot] 语音文件定位失败，事件字段：${JSON.stringify(rec)}`);
+            return;
+          }
+          const heard = await sttEngine.transcribeFile(fileSource(local, `qq-${groupId}`));
           if (heard.trim() === "") return;
           // eslint-disable-next-line no-console
           console.log(`[qq-bot] 群 ${groupId} 语音转写：${heard}`);

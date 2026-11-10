@@ -1,6 +1,14 @@
 // QQ 群机器人宿主：事件解析/触发判定/清洗/分条（纯逻辑测试；WS/HTTP 需真实 OneBot 服务）
 import { describe, expect, it } from "vitest";
-import { extractCqFile, extractUserText, isGroupMessage, splitForSend, stripCqCodes } from "../../hosts/qq-host/qq-bot";
+import {
+  extractCqFile,
+  extractCqRecord,
+  extractUserText,
+  isGroupMessage,
+  resolveRecordFile,
+  splitForSend,
+  stripCqCodes,
+} from "../../hosts/qq-host/qq-bot";
 import { writeEvidenceLog } from "../helpers/evidence";
 
 describe("qq bot (onebot 11 parsing)", () => {
@@ -70,7 +78,37 @@ describe("qq bot (onebot 11 parsing)", () => {
     expect(extractCqFile("纯文本", "record")).toBeNull();
   });
 
+  it("extractCqRecord：优先 message 数组段（含 path/url），兜底 raw CQ 码", () => {
+    const segEv = {
+      post_type: "message",
+      message_type: "group",
+      raw_message: "[CQ:record,file=a.amr]",
+      message: [{ type: "record", data: { file: "a.amr", path: "D:/nap/cache/a.amr", url: "http://x/a.amr" } }],
+    };
+    expect(extractCqRecord(segEv)).toEqual({ file: "a.amr", path: "D:/nap/cache/a.amr", url: "http://x/a.amr" });
+    const rawEv = {
+      post_type: "message",
+      message_type: "group",
+      raw_message: "[CQ:record,file=b.amr,path=D:/x/b.amr]",
+      message: "text",
+    };
+    expect(extractCqRecord(rawEv)).toEqual({ file: "b.amr", path: "D:/x/b.amr", url: undefined });
+    expect(extractCqRecord({ ...rawEv, raw_message: "纯文本" })).toBeNull();
+  });
+
+  it("resolveRecordFile：path 优先；file 相对名在根目录内定位；找不到返回 null", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "genesis-rec-"));
+    fs.mkdirSync(path.join(dir, "deep"));
+    fs.writeFileSync(path.join(dir, "deep", "v.amr"), "x");
+    expect(resolveRecordFile({ path: path.join(dir, "deep", "v.amr") }, [dir])).toBe(
+      path.join(dir, "deep", "v.amr"),
+    );
+    expect(resolveRecordFile({ file: "v.amr" }, [dir])).toBe(path.join(dir, "deep", "v.amr"));
+    expect(resolveRecordFile({ file: "nope.amr" }, [dir])).toBeNull();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
   it("写入 qq-bot 证据产物", () => {
-    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice file extract; chunking"], true);
+    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve; chunking"], true);
   });
 });
