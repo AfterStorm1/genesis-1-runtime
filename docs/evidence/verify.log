@@ -10,17 +10,15 @@
 
 [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mD:/Whale-chan/Hui/runtime[39m
 
- [32m✓[39m [35m|unit|[39m tests/unit/speech-cas.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 15[2mms[22m[39m
- [31m❯[39m [35m|unit|[39m tests/unit/tts-renderer.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[90m 27[2mms[22m[39m
-[31m   [31m×[31m tts speech renderer[2m > [22m朗读失败 → signal_error（会话将被标记 failed/feedback_error）[90m 11[2mms[22m[31m[39m
-[31m     → Cannot read properties of undefined (reading 'error')[39m
- [32m✓[39m [35m|unit|[39m tests/unit/llm-adapter.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 32[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/watchdog.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 24[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/hook-chain.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/speech-cas.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/llm-adapter.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 45[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/tts-renderer.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 51[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/watchdog.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/hook-chain.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 21[2mms[22m[39m
  [32m✓[39m [35m|unit|[39m tests/unit/validate-at.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 28[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/tool.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 20[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/scheduler.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 36[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/aggregator.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 31[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/tool.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/aggregator.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/scheduler.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 24[2mms[22m[39m
 [90mstderr[2m | tests/unit/async-batch.test.ts[2m > [22m[2mA09 async batch[2m > [22m[2m超限：maxBatchOutputs 截断 + return()
 [22m[39m[pipeline] batch_truncated
 
@@ -40,7 +38,6 @@
 [90mstdout[2m | tests/unit/async-batch.test.ts[2m > [22m[2mA09 async batch[2m > [22m[2mPromise 路径：单 output 直接 validateAt 后进 pendingOutputs，不受批次约束
 [22m[39m[renderer:text] rt:a09p:l3:1 emotion=happy priority=50
 
- [32m✓[39m [35m|unit|[39m tests/unit/dispose.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 83[2mms[22m[39m
 [90mstderr[2m | tests/unit/async-batch.test.ts[2m > [22m[2mA09 async batch[2m > [22m[2m逐 item validateAt：坏版本 output 使整批失败
 [22m[39m[pipeline] batch_iterator_error Error: contract_version_mismatch:cognitionOut:expected=1.0.0:actual=0.1.0
     at Object.validate [90m(D:\Whale-chan\Hui\runtime\[39mcore\migrate\contract-registry-impl.ts:71:15[90m)[39m
@@ -48,25 +45,24 @@
     at consumeIterator [90m(D:\Whale-chan\Hui\runtime\[39mcore\pipeline.ts:136:9[90m)[39m
     at handleInput [90m(D:\Whale-chan\Hui\runtime\[39mcore\pipeline.ts:232:7[90m)[39m
 
- [32m✓[39m [35m|unit|[39m tests/unit/async-batch.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 207[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/multi-runtime.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 31[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/history-store.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 100[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/streaming-renderer.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 24[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/safety-merge.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 35[2mms[22m[39m
- [31m❯[39m [35m|unit|[39m tests/unit/long-term-memory.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[90m 216[2mms[22m[39m
-[31m   [31m×[31m long-term memory[2m > [22mTTL：久未使用且重要度 ≤2 → 归档；重要度高不受 TTL 影响[90m 35[2mms[22m[31m[39m
-[31m     → expected [ '会被遗忘的低重要度', '永远记住的约定' ] to not include '会被遗忘的低重要度'[39m
-[31m   [31m×[31m long-term memory[2m > [22m显式遗忘：按关键词归档；restoreArchived 可回滚[90m 45[2mms[22m[31m[39m
-[31m     → expected [ '用户喜欢下雨天', '用户喜欢咖啡' ] to deeply equal [ '用户喜欢咖啡', '用户喜欢下雨天' ][39m
- [32m✓[39m [35m|unit|[39m tests/unit/phase-separation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 94[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/id-registry.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 20[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/slots.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 61[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/feedback-kinds.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 77[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/async-batch.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 155[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/dispose.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 53[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/streaming-renderer.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 28[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/history-store.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 96[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/multi-runtime.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 36[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/long-term-memory.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 128[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/safety-merge.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 53[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/id-registry.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 46[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/slots.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 62[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/phase-separation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 96[2mms[22m[39m
 [90mstderr[2m | tests/unit/feedback-kinds.test.ts[2m > [22m[2mA16 feedback kinds[2m > [22m[2mrenderer_error 只记 logger + bus 系统事件，不改 session
 [22m[39m[renderer_error] { sourceId: [32m'renderer:speech'[39m, error: [32m'gpu-lost'[39m }
 
- [32m✓[39m [35m|unit|[39m tests/unit/migrate.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 19[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/ledger.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 38[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/feedback-kinds.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 58[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/migrate.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/ledger.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/termination-hook.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/naming.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 345[2mms[22m[39m
 [90mstderr[2m | tests/unit/frame-channel.test.ts[2m > [22m[2mA07 frame-channel[2m > [22m[2m异常隔离：单订阅者抛错不影响其余订阅者
 [22m[39m[frame-channel] subscriber error Error: boom
     at Object.cb [90m(D:\Whale-chan\Hui\runtime\[39mtests\unit\frame-channel.test.ts:56:13[90m)[39m
@@ -80,72 +76,22 @@
     at Proxy.<anonymous> [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:972:17[90m)[39m
     at Proxy.methodWrapper [90m(file:///D:/Whale-chan/Hui/runtime/[39mnode_modules/[4mchai[24m/index.js:1686:25[90m)[39m
 
- [32m✓[39m [35m|unit|[39m tests/unit/frame-channel.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 64[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/termination-hook.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 23[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/naming.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 307[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/hub.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 28[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/chat-memory.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 264[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/sanitize.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 25[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/input-bus.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 19[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/speech-postprocess.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 16[2mms[22m[39m
- [32m✓[39m [35m|unit|[39m tests/unit/speech-segmenter.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/frame-channel.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 60[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/chat-memory.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 179[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/sanitize.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/input-bus.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/hub.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/speech-postprocess.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m [35m|unit|[39m tests/unit/speech-segmenter.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 13[2mms[22m[39m
  [32m✓[39m [35m|unit|[39m tests/unit/renderer-mount.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 20[2mms[22m[39m
 
-[31m⎯⎯⎯⎯⎯⎯⎯[1m[7m Failed Tests 3 [27m[22m⎯⎯⎯⎯⎯⎯⎯[39m
-
-[31m[1m[7m FAIL [27m[22m[39m[35m|unit|[39m  tests/unit/long-term-memory.test.ts[2m > [22mlong-term memory[2m > [22mTTL：久未使用且重要度 ≤2 → 归档；重要度高不受 TTL 影响
-[31m[1mAssertionError[22m: expected [ '会被遗忘的低重要度', '永远记住的约定' ] to not include '会被遗忘的低重要度'[39m
-[36m [2m❯[22m tests/unit/long-term-memory.test.ts:[2m44:24[22m[39m
-    [90m 42| [39m    [35mconst[39m active [33m=[39m m[33m.[39m[34mlist[39m()[33m.[39m[34mfilter[39m((e) [33m=>[39m e[33m.[39marchived [33m!==[39m [35mtrue[39m)[33m.[39m[34mmap[39m((e)…
-    [90m 43| [39m    [34mexpect[39m(active)[33m.[39m[34mtoContain[39m([32m"永远记住的约定"[39m)[33m;[39m
-    [90m 44| [39m    [34mexpect[39m(active)[33m.[39mnot[33m.[39m[34mtoContain[39m([32m"会被遗忘的低重要度"[39m)[33m;[39m
-    [90m   | [39m                       [31m^[39m
-    [90m 45| [39m  })[33m;[39m
-    [90m 46| [39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
-
-[31m[1m[7m FAIL [27m[22m[39m[35m|unit|[39m  tests/unit/long-term-memory.test.ts[2m > [22mlong-term memory[2m > [22m显式遗忘：按关键词归档；restoreArchived 可回滚
-[31m[1mAssertionError[22m: expected [ '用户喜欢下雨天', '用户喜欢咖啡' ] to deeply equal [ '用户喜欢咖啡', '用户喜欢下雨天' ][39m
-
-[32m- Expected[39m
-[31m+ Received[39m
-
-[2m  Array [[22m
-[32m-   "用户喜欢咖啡",[39m
-[2m    "用户喜欢下雨天",[22m
-[31m+   "用户喜欢咖啡",[39m
-[2m  ][22m
-
-[36m [2m❯[22m tests/unit/long-term-memory.test.ts:[2m54:55[22m[39m
-    [90m 52| [39m    [34mexpect[39m(m[33m.[39m[34mpromptItems[39m()[33m.[39m[34mmap[39m((i) [33m=>[39m i[33m.[39mtext))[33m.[39m[34mtoEqual[39m([[32m"用户喜欢下雨[39m…
-    [90m 53| [39m    [34mexpect[39m(m[33m.[39m[34mrestoreArchived[39m())[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
-    [90m 54| [39m    [34mexpect[39m(m[33m.[39m[34mpromptItems[39m()[33m.[39m[34mmap[39m((i) [33m=>[39m i[33m.[39mtext)[33m.[39m[34msort[39m())[33m.[39m[34mtoEqual[39m([[32m"用户喜[39m…
-    [90m   | [39m                                                      [31m^[39m
-    [90m 55| [39m  })[33m;[39m
-    [90m 56| [39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯[22m[39m
-
-[31m[1m[7m FAIL [27m[22m[39m[35m|unit|[39m  tests/unit/tts-renderer.test.ts[2m > [22mtts speech renderer[2m > [22m朗读失败 → signal_error（会话将被标记 failed/feedback_error）
-[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'error')[39m
-[36m [2m❯[22m tests/unit/tts-renderer.test.ts:[2m103:16[22m[39m
-    [90m101| [39m    [35mawait[39m vi[33m.[39m[34mwaitFor[39m(() [33m=>[39m events[33m.[39m[34msome[39m((e) [33m=>[39m e[33m.[39mkind [33m===[39m [32m"signal_error[39m…
-    [90m102| [39m    [35mconst[39m err [33m=[39m events[33m.[39m[34mfind[39m((e) [33m=>[39m e[33m.[39mkind [33m===[39m [32m"signal_error"[39m) [35mas[39m [33mExtra[39m…
-    [90m103| [39m    [34mexpect[39m(err[33m.[39merror)[33m.[39m[34mtoContain[39m([32m"sapi_exit_1"[39m)[33m;[39m
-    [90m   | [39m               [31m^[39m
-    [90m104| [39m    r[33m.[39m[34mdispose[39m()[33m;[39m
-    [90m105| [39m  })[33m;[39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯[22m[39m
-
-[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m30 passed[39m[22m[90m (32)[39m
-[2m      Tests [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m183 passed[39m[22m[90m (186)[39m
-[2m   Start at [22m 12:59:07
-[2m   Duration [22m 9.61s[2m (transform 6.94s, setup 0ms, collect 23.35s, tests 2.02s, environment 20ms, prepare 29.47s)[22m
+[2m Test Files [22m [1m[32m32 passed[39m[22m[90m (32)[39m
+[2m      Tests [22m [1m[32m186 passed[39m[22m[90m (186)[39m
+[2m   Start at [22m 13:26:19
+[2m   Duration [22m 9.70s[2m (transform 7.42s, setup 0ms, collect 24.54s, tests 1.81s, environment 17ms, prepare 29.29s)[22m
 
  
-["unit-tests"] exit=1 
+["unit-tests"] exit=0 
  
 ================================================== 
 ["e2e-tests"]  node node_modules/vitest/vitest.mjs run --config vitest.e2e.config.ts 
@@ -157,12 +103,12 @@
 [22m[39m[persona] loaded: Genesis-1 Demo Persona (D:\Whale-chan\Hui\runtime\config\persona\example.persona.json)
 [renderer:text] rt:e2e:l3:1 emotion=happy priority=76
 
- [32m✓[39m [34m|e2e|[39m tests/e2e/e2e-minimal.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 44[2mms[22m[39m
+ [32m✓[39m [34m|e2e|[39m tests/e2e/e2e-minimal.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 36[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m1 passed[39m[22m[90m (1)[39m
-[2m   Start at [22m 12:59:24
-[2m   Duration [22m 2.75s[2m (transform 623ms, setup 0ms, collect 909ms, tests 44ms, environment 0ms, prepare 756ms)[22m
+[2m   Start at [22m 13:26:30
+[2m   Duration [22m 2.10s[2m (transform 455ms, setup 0ms, collect 693ms, tests 36ms, environment 0ms, prepare 514ms)[22m
 
  
 ["e2e-tests"] exit=0 
@@ -185,7 +131,7 @@ scan:payload-shape → pass=true failures=0
 ["bench-slots"]  node node_modules/tsx/dist/cli.mjs scripts/bench-slots.ts 
  
 {
-  "generatedAt": "2026-11-10T04:59:31.538Z",
+  "generatedAt": "2026-11-10T05:26:37.151Z",
   "result": "local pass",
   "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "handbookThresholds": {
@@ -201,41 +147,41 @@ scan:payload-shape → pass=true failures=0
   "results": [
     {
       "label": "hook-chain.run(empty)",
-      "nsPerOp": 45.7865,
-      "usPerOp": 0.045786499999999994
+      "nsPerOp": 50.2055,
+      "usPerOp": 0.0502055
     },
     {
       "label": "source-hub.flush(empty)",
-      "nsPerOp": 28.0995,
-      "usPerOp": 0.0280995
+      "nsPerOp": 28.7885,
+      "usPerOp": 0.028788499999999998
     },
     {
       "label": "contract.validateAndMigrate(no-op)",
-      "nsPerOp": 18.1285,
-      "usPerOp": 0.0181285
+      "nsPerOp": 12.1075,
+      "usPerOp": 0.0121075
     },
     {
       "label": "hook-chain.run(n=1)",
-      "nsPerOp": 742.4,
-      "usPerOp": 0.7424
+      "nsPerOp": 737.031,
+      "usPerOp": 0.737031
     },
     {
       "label": "hook-chain.run(n=2)",
-      "nsPerOp": 671.996,
-      "usPerOp": 0.6719959999999999
+      "nsPerOp": 706.01,
+      "usPerOp": 0.70601
     },
     {
       "label": "hook-chain.run(n=4)",
-      "nsPerOp": 788.276,
-      "usPerOp": 0.788276
+      "nsPerOp": 890.5,
+      "usPerOp": 0.8905
     },
     {
       "label": "hook-chain.run(n=8)",
-      "nsPerOp": 964.409,
-      "usPerOp": 0.964409
+      "nsPerOp": 1073.065,
+      "usPerOp": 1.0730650000000002
     }
   ],
-  "regression": 1.2990422952586207
+  "regression": 1.4559292621341573
 }
  
 ["bench-slots"] exit=0 
@@ -244,7 +190,7 @@ scan:payload-shape → pass=true failures=0
 ["bench-frame-channel"]  node node_modules/tsx/dist/cli.mjs scripts/bench-frame-channel.ts 
  
 {
-  "generatedAt": "2026-11-10T04:59:32.401Z",
+  "generatedAt": "2026-11-10T05:26:37.936Z",
   "result": "local pass",
   "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "semantics": {
@@ -254,11 +200,11 @@ scan:payload-shape → pass=true failures=0
   "measurements": [
     {
       "label": "publish_with_slow_subscriber_ms",
-      "value": "19.318"
+      "value": "19.572"
     },
     {
       "label": "publish_no_subscriber_ns_per_op",
-      "value": "41.6"
+      "value": "41.8"
     },
     {
       "label": "dropIfBusy_reentrant",
@@ -307,14 +253,6 @@ dispose snapshot:
 ================================================== 
 ["handover"]  node node_modules/tsx/dist/cli.mjs scripts/gen-handover.ts 
  
-time=2026-11-10T12:59:35.190+08:00 level=INFO source=app_windows.go:281 msg="starting Ollama" app=C:\Users\28697\AppData\Local\Programs\Ollama version=0.40.14 OS=Windows/10.0.22631
-time=2026-11-10T12:59:35.257+08:00 level=INFO source=app.go:238 msg="initialized tools registry" tool_count=0
-time=2026-11-10T12:59:35.308+08:00 level=INFO source=app.go:253 msg="starting ollama server"
-time=2026-11-10T12:59:35.309+08:00 level=INFO source=app.go:285 msg="starting ui server" port=57869
-time=2026-11-10T12:59:35.466+08:00 level=INFO source=app.go:402 msg="deferring pending update for fast startup"
-time=2026-11-10T12:59:38.309+08:00 level=INFO source=updater.go:373 msg="beginning update checker" interval=1h0m0s
-time=2026-11-10T12:59:41.123+08:00 level=INFO source=updater.go:133 msg="New update available at https://github.com/ollama/ollama/releases/download/v0.40.16/OllamaSetup.exe"
-time=2026-11-10T12:59:41.197+08:00 level=ERROR source=updater.go:410 msg="failed to download new release" error="unexpected status attempting to download update 502"
 handover written: D:\Whale-chan\Hui\runtime\docs\HANDOVER.md
  
 ["handover"] exit=0 

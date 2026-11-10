@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-10T04:59:31.538Z",
+  "generatedAt": "2026-11-10T05:26:37.151Z",
   "result": "local pass",
   "ci": "pass (GitHub Actions, 见 ci-status.md)",
   "handbookThresholds": {
@@ -15,39 +15,39 @@
   "results": [
     {
       "label": "hook-chain.run(empty)",
-      "nsPerOp": 45.7865,
-      "usPerOp": 0.045786499999999994
+      "nsPerOp": 50.2055,
+      "usPerOp": 0.0502055
     },
     {
       "label": "source-hub.flush(empty)",
-      "nsPerOp": 28.0995,
-      "usPerOp": 0.0280995
+      "nsPerOp": 28.7885,
+      "usPerOp": 0.028788499999999998
     },
     {
       "label": "contract.validateAndMigrate(no-op)",
-      "nsPerOp": 18.1285,
-      "usPerOp": 0.0181285
+      "nsPerOp": 12.1075,
+      "usPerOp": 0.0121075
     },
     {
       "label": "hook-chain.run(n=1)",
-      "nsPerOp": 742.4,
-      "usPerOp": 0.7424
+      "nsPerOp": 737.031,
+      "usPerOp": 0.737031
     },
     {
       "label": "hook-chain.run(n=2)",
-      "nsPerOp": 671.996,
-      "usPerOp": 0.6719959999999999
+      "nsPerOp": 706.01,
+      "usPerOp": 0.70601
     },
     {
       "label": "hook-chain.run(n=4)",
-      "nsPerOp": 788.276,
-      "usPerOp": 0.788276
+      "nsPerOp": 890.5,
+      "usPerOp": 0.8905
     },
     {
       "label": "hook-chain.run(n=8)",
-      "nsPerOp": 964.409,
-      "usPerOp": 0.964409
+      "nsPerOp": 1073.065,
+      "usPerOp": 1.0730650000000002
     }
   ],
-  "regression": 1.2990422952586207
+  "regression": 1.4559292621341573
 }

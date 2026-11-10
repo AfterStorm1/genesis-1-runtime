@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-10T04:59:29.099Z",
+  "generatedAt": "2026-11-10T05:26:34.628Z",
   "contractCandidate": "1.0.0-rc.5",
   "result": "local pass",
   "ci": "pass (GitHub Actions, 见 ci-status.md)",

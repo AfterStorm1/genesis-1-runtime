@@ -1,6 +1,6 @@
 # callgraph-report.md (A02 静态面)
 
-- 生成时间：2026-11-10T04:59:29.109Z
+- 生成时间：2026-11-10T05:26:34.635Z
 - 状态：local pass（静态面）；CI：pass（GitHub Actions，见 ci-status.md）
 
 ## L35.emitFrame 出现位置

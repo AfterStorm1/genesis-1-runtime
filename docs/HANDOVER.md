@@ -1,6 +1,6 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-10T04:59:49.682Z（北京时间 2026/11/10 12:59:49）
+> 自动生成时间：2026-11-10T05:26:41.359Z（北京时间 2026/11/10 13:26:41）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
@@ -13,6 +13,7 @@
 
 ### 最近提交（git log -8）
 
+`c190ce1 fix: test issues — waitForTruthy in tts test, clock injection for LTM TTL test, fix forget-rollback expectation`
 `6567c4c feat: TTS voice output (Windows SAPI speaker + tts-speech-renderer reusing feedback loop)`
 `1b60d6f fix: wait for streaming renderer before next prompt (whenIdle); quiet llm.request logs in stream mode`
 `3cf64d9 feat: streaming output (speech segmenter + typewriter text renderer, value-level)`
@@ -20,12 +21,13 @@
 `0797b0e feat: protagonist Hui persona+rules; speech postprocess (filter table, punctuation, lead-word); termination guard hook (highest-priority)`
 `39727b8 chore: refresh HANDOVER.md (daily scheduled); allow env injection in gen-handover`
 `a17c127 fix: ship real config/world/rules.md; warn when CHAT_WORLD_RULES file missing`
-`091be89 feat+docs: world-rules/extra-system/temperature env knobs; manual-config-guide covering all human-editable settings`
 
 ### 本地 Ollama 模型
 
 ```
-（ollama 不可用或未安装）
+NAME          ID              SIZE      MODIFIED     
+qwen3:8b      500a1f067a9f    5.2 GB    36 hours ago    
+qwen2.5:7b    845dbda0ea48    4.7 GB    37 hours ago
 ```
 
 ---

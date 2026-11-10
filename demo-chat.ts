@@ -20,6 +20,7 @@
 //   CHAT_CHAR_DELAY    流式逐字延迟 ms（默认 25）  CHAT_SENTENCE_DELAY 句间延迟 ms（默认 300）
 //   CHAT_TTS           语音输出开关（默认 1：Windows SAPI 离线朗读；0 关闭）
 //   CHAT_TTS_RATE      SAPI 语速 -10（慢）~10（快），默认 0
+//   CHAT_EMOTION       情绪状态机开关（默认 1；0 关闭；每 60s tick，波动超阈值她会主动说话）
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
@@ -37,6 +38,9 @@ import { createSummarizer } from "./adapters/llm/summarizer";
 import type { Summarizer } from "./adapters/llm/summarizer";
 import { createTerminationHook } from "./adapters/safety-guard/termination-hook";
 import type { TerminationHook } from "./adapters/safety-guard/termination-hook";
+import { createEmotionStateMachine } from "./adapters/drive/emotion-state-machine";
+import type { EmotionStateMachine } from "./adapters/drive/emotion-state-machine";
+import { createEmotionBiasHook } from "./adapters/drive/emotion-bias-hook";
 import { createMockSpeechRenderer } from "./adapters/renderers/mock-speech-renderer";
 import { createStreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
 import type { StreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
@@ -44,6 +48,7 @@ import { createTtsSpeechRenderer } from "./adapters/renderers/tts-speech-rendere
 import { createSapiSpeaker } from "./adapters/tts/sapi-speaker";
 import { createTextRenderer } from "./adapters/renderers/text-renderer";
 import type { PersonaCardV3 } from "./core/contract/persona";
+import { COGNITION_CONTRACT_VERSION } from "./core/contract/cognition";
 
 export interface ChatRuntime {
   rt: RuntimeBundle;
@@ -66,6 +71,8 @@ export interface ChatRuntime {
   streamOutput: boolean;
   /** 流式模式下等待渲染器播完（否则下一个输入提示会与打字机输出串行） */
   whenRendered?: () => Promise<void>;
+  /** 情绪状态机（轻量 InternalDrive；CHAT_EMOTION=0 时不存在） */
+  emotion?: EmotionStateMachine;
 }
 
 export interface ChatRuntimeOptions {
@@ -156,6 +163,10 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     ? createTtsSpeechRenderer({ speaker: createSapiSpeaker({ rate: Number.isFinite(ttsRate) ? ttsRate : 0 }) })
     : createMockSpeechRenderer();
 
+  // 情绪状态机（轻量 InternalDrive，默认开启；CHAT_EMOTION=0 关闭）
+  const emotionOn = (process.env.CHAT_EMOTION ?? "1") !== "0";
+  const emotion = emotionOn ? createEmotionStateMachine() : undefined;
+
   const rt = await compose({
     runtimeId: "rt:chat",
     personaId: "persona:chat",
@@ -172,7 +183,12 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
       quiet: streamOutput, // 流式模式下静音 llm.request 日志，避免串行干扰打字机输出
     }),
     memory, // 对话记忆走契约预留的 MemoryStore → recall 路径
-    hooks: [guard], // 终止互动钩子（beforeCognition 强制判定）
+    hooks: [
+      guard, // 终止互动钩子（beforeCognition 强制判定，最高优先级）
+      ...(emotion !== undefined
+        ? [createEmotionBiasHook(emotion, { label: persona.data.name })] // 情绪注记注入
+        : []),
+    ],
     batchTimeoutMs: 120_000, // 本地 LLM（CPU 推理）延迟远高于默认 2s 批次超时
   });
 
@@ -195,6 +211,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     longTermFile,
     streamOutput,
     whenRendered,
+    emotion,
   };
 }
 
@@ -251,10 +268,34 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.log(
-    `\n与「${persona.data.name}」聊天开始（/quit 退出 / 记忆 查看 / 忘记 关键词 遗忘）\n`,
+    `\n与「${persona.data.name}」聊天开始（/quit 退出 / 记忆 查看 / 忘记 关键词 遗忘 / 情绪 查看）\n`,
   );
 
+  if (chat.emotion !== undefined) {
+    const s = chat.emotion.state();
+    // eslint-disable-next-line no-console
+    console.log(`[情绪] 初始 ${s.emotion}，强度 ${s.intensity.toFixed(2)}（夸奖/批评/安抚都会影响；情绪高了她会主动说话）`);
+  }
+
   let userTurns = 0;
+  // 情绪驱动循环：每 60 秒 tick 一次；波动超阈值时她会自主开口（离线自主生活最小实现）
+  const driveTimer = setInterval(() => {
+    void (async () => {
+      if (chat.emotion === undefined || chat.guard.terminated) return;
+      const intent = await chat.emotion.tick();
+      if (intent !== null) {
+        // eslint-disable-next-line no-console
+        console.log("\n[自主] 情绪波动，蕙想说话……");
+        await chat.rt.pipeline.handleInput({
+          contractVersion: COGNITION_CONTRACT_VERSION,
+          kind: "drive_intent",
+          intent,
+          persona: chat.persona,
+        });
+        await chat.whenRendered?.();
+      }
+    })();
+  }, 60_000);
 
   for (;;) {
     const line = await ask("你 > ");
@@ -288,6 +329,30 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
         }
       }
       continue;
+    }
+    if (trimmed === "/情绪") {
+      if (chat.emotion === undefined) {
+        // eslint-disable-next-line no-console
+        console.log("（情绪状态机未启用：CHAT_EMOTION=0）");
+      } else {
+        const s = chat.emotion.state();
+        // eslint-disable-next-line no-console
+        console.log(
+          `[情绪] ${s.emotion} | 强度 ${s.intensity.toFixed(2)} | VAD v=${s.valence.toFixed(2)} a=${s.arousal.toFixed(2)} d=${s.dominance.toFixed(2)}`,
+        );
+      }
+      continue;
+    }
+
+    // —— 情绪事件：分析输入并施加（夸奖/批评/安抚/亲近/压力）——
+    if (chat.emotion !== undefined) {
+      const before = chat.emotion.state().emotion;
+      chat.emotion.applyText(trimmed);
+      const after = chat.emotion.state();
+      if (after.emotion !== before) {
+        // eslint-disable-next-line no-console
+        console.log(`[情绪] ${before} → ${after.emotion}（强度 ${after.intensity.toFixed(2)}）`);
+      }
     }
 
     // 流式模式：先打印名字前缀，回复由渲染器逐句打字机输出
@@ -335,6 +400,7 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
   }
 
   rl.close();
+  clearInterval(driveTimer);
   await chat.rt.dispose();
   // eslint-disable-next-line no-console
   console.log("已退出。长期记忆与历史已保存。");
