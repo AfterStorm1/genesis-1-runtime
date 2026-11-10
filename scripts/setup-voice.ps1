@@ -27,24 +27,30 @@ function Download-File([string]$Url, [string]$Out, [string[]]$Fallbacks) {
 
 # 0. 自动发现 whisper.cpp 预编译包的真实下载地址
 function Find-WhisperAssetUrl() {
-  # 方式一：GitHub API 列最新 release 资源（不依赖版本号）
+  # 方式一：GitHub API 列最新 release 资源（不依赖版本号；同时打印真实资源名便于排查）
   foreach ($api in @("https://api.github.com/repos/ggml-org/whisper.cpp/releases/latest")) {
     try {
       $rel = Invoke-RestMethod -Uri $api -TimeoutSec 60 -Headers @{ "User-Agent" = "genesis-setup" }
+      Write-Host ("  最新版本：" + $rel.tag_name)
+      $names = ($rel.assets | ForEach-Object { $_.name }) -join ", "
+      Write-Host ("  资源列表：" + $names)
       foreach ($a in $rel.assets) {
-        if ($a.name -like "whisper-bin*.zip") { Write-Host "  发现资源：" $a.name; return $a.browser_download_url }
+        if ($a.name -like "whisper-bin*.zip" -or $a.name -like "*bin*x64*.zip" -or $a.name -like "whisper*.zip") {
+          Write-Host "  选中资源：" $a.name
+          return $a.browser_download_url
+        }
       }
-      Write-Host "  最新 release 无 whisper-bin*.zip 资源，改用候选版本…"
+      Write-Host "  最新 release 无匹配资源，改用候选版本…"
     } catch {
       Write-Host ("  API 查询失败（" + $_.Exception.Message + "），改用候选版本…")
     }
   }
-  # 方式二：候选版本与资源名逐个探测
-  foreach ($v in @("v1.7.5", "v1.7.4", "v1.7.3", "v1.7.2", "v1.7.1", "v1.7.0", "v1.6.2")) {
-    foreach ($name in @("whisper-bin-x64.zip", "whisper-bin-x64-$v.zip")) {
+  # 方式二：候选版本与资源名逐个探测（最新版本号放最前）
+  foreach ($v in @($rel.tag_name, "v1.7.5", "v1.7.4", "v1.7.3", "v1.7.2", "v1.7.1", "v1.7.0", "v1.6.2")) {
+    foreach ($name in @("whisper-bin-x64.zip", "whisper-bin-x64-$v.zip", "whisper-bin.zip")) {
       $url = "https://github.com/ggml-org/whisper.cpp/releases/download/$v/$name"
       try {
-        $r = Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 30
+        $r = Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 20
         if ($r.StatusCode -eq 200) { Write-Host "  发现资源：" $url; return $url }
       } catch { }
     }
