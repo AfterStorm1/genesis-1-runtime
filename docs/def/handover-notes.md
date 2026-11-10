@@ -40,9 +40,12 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
     摘要器一次提炼 [事实]+[感受] 两节；/记忆 分「感受」「事实」两栏，/忘记 同时清两层。
 13. STT 语音输入：`adapters/stt/sapi-speech-recognizer.ts`（Windows SAPI 语音识别，离线）；
     聊天里打 `/说` 对着麦克风说话；需系统装有中文语音识别语言包；CHAT_STT_LANG 可换区域。
-14. 反应样本库 + 每周自检：`config/reactions/samples.json`（12 条，作为语气校准 few-shot 注入 +
-    自检题集）；`weekly-check.cmd` 跑 9 步自检，报告固定在 `docs/evidence/weekly-check-latest.md`
+14. 反应样本库 + 每周自检：`config/reactions/samples.json`（15 条：12 工作/通用 + 3 生活面，作为语气校准
+    few-shot 注入 + 自检题集）；`weekly-check.cmd` 跑 9 步自检，报告固定在 `docs/evidence/weekly-check-latest.md`
     （已设每周一 09:00 自动执行）。反应评测为关键词级粗评。
+15. 人格去工作场景依赖：规则文件顶部「场景框架」元指令 + 「生活面」节（**where/habits/relations 仍是占位，
+    待用户填写**）+ 「非工作场景」规则节；工作规则降入「可选场景」节。验收：`scripts/check-descope.ts`
+    （V1-V3，报告 docs/evidence/persona-descope/）；V4 回归 = weekly-check。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 
