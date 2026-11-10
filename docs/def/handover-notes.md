@@ -38,6 +38,8 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
     （默认开启；CHAT_EMOTION=0 关闭；每 60s tick，情绪波动超阈值她会主动说话；聊天命令 /情绪 查看）。
 12. 记忆第一人称感受层：`adapters/llm/feeling-memory.ts`（感受会淡：强度逐日衰减，容量 20/TTL 14 天），
     摘要器一次提炼 [事实]+[感受] 两节；/记忆 分「感受」「事实」两栏，/忘记 同时清两层。
+13. STT 语音输入：`adapters/stt/sapi-speech-recognizer.ts`（Windows SAPI 语音识别，离线）；
+    聊天里打 `/说` 对着麦克风说话；需系统装有中文语音识别语言包；CHAT_STT_LANG 可换区域。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 

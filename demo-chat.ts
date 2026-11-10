@@ -21,6 +21,7 @@
 //   CHAT_TTS           语音输出开关（默认 1：Windows SAPI 离线朗读；0 关闭）
 //   CHAT_TTS_RATE      SAPI 语速 -10（慢）~10（快），默认 0
 //   CHAT_EMOTION       情绪状态机开关（默认 1；0 关闭；每 60s tick，波动超阈值她会主动说话）
+//   CHAT_STT_LANG      语音识别语言区域（默认 zh-CN；/说 触发，需系统装有对应识别语言包）
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
@@ -43,6 +44,8 @@ import type { TerminationHook } from "./adapters/safety-guard/termination-hook";
 import { createEmotionStateMachine } from "./adapters/drive/emotion-state-machine";
 import type { EmotionStateMachine } from "./adapters/drive/emotion-state-machine";
 import { createEmotionBiasHook } from "./adapters/drive/emotion-bias-hook";
+import { createSapiSpeechRecognizer } from "./adapters/stt/sapi-speech-recognizer";
+import type { SpeechRecognizer } from "./adapters/stt/sapi-speech-recognizer";
 import { createMockSpeechRenderer } from "./adapters/renderers/mock-speech-renderer";
 import { createStreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
 import type { StreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
@@ -77,6 +80,8 @@ export interface ChatRuntime {
   whenRendered?: () => Promise<void>;
   /** 情绪状态机（轻量 InternalDrive；CHAT_EMOTION=0 时不存在） */
   emotion?: EmotionStateMachine;
+  /** 语音识别器（/说 命令触发；Windows SAPI，需要系统中文语音识别语言包） */
+  recognizer: SpeechRecognizer;
 }
 
 export interface ChatRuntimeOptions {
@@ -174,6 +179,9 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
   const emotionOn = (process.env.CHAT_EMOTION ?? "1") !== "0";
   const emotion = emotionOn ? createEmotionStateMachine() : undefined;
 
+  // 语音识别器（/说 触发；CHAT_STT_LANG 可换识别语言区域）
+  const recognizer = createSapiSpeechRecognizer({ culture: process.env.CHAT_STT_LANG ?? "zh-CN" });
+
   const rt = await compose({
     runtimeId: "rt:chat",
     personaId: "persona:chat",
@@ -220,6 +228,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     streamOutput,
     whenRendered,
     emotion,
+    recognizer,
   };
 }
 
@@ -276,7 +285,7 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.log(
-    `\n与「${persona.data.name}」聊天开始（/quit 退出 / 记忆 查看 / 忘记 关键词 遗忘 / 情绪 查看）\n`,
+    `\n与「${persona.data.name}」聊天开始（/quit 退出 / 记忆 查看 / 忘记 关键词 遗忘 / 情绪 查看 / 说 语音输入）\n`,
   );
 
   if (chat.emotion !== undefined) {
@@ -365,10 +374,32 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       continue;
     }
 
+    // —— 语音输入（/说）：Windows SAPI 识别一句，识别的文本走与打字完全相同的回复路径 ——
+    let userText = trimmed;
+    if (trimmed === "/说") {
+      // eslint-disable-next-line no-console
+      console.log("（正在听…请对着麦克风说话，最长 10 秒）");
+      try {
+        const heard = await chat.recognizer.recognize(12_000);
+        if (heard.trim() === "") {
+          // eslint-disable-next-line no-console
+          console.log("（没听清，说 /说 再试一次）");
+          continue;
+        }
+        // eslint-disable-next-line no-console
+        console.log(`你(语音) > ${heard}`);
+        userText = heard;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.log(`[stt] 识别失败：${err instanceof Error ? err.message : String(err)}（需要 Windows 中文语音识别语言包）`);
+        continue;
+      }
+    }
+
     // —— 情绪事件：分析输入并施加（夸奖/批评/安抚/亲近/压力）——
     if (chat.emotion !== undefined) {
       const before = chat.emotion.state().emotion;
-      chat.emotion.applyText(trimmed);
+      chat.emotion.applyText(userText);
       const after = chat.emotion.state();
       if (after.emotion !== before) {
         // eslint-disable-next-line no-console
@@ -381,7 +412,7 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       // eslint-disable-next-line no-console
       console.log(`${persona.data.name} >`);
     }
-    const { text, emotion } = await sendUserMessage(chat, trimmed);
+    const { text, emotion } = await sendUserMessage(chat, userText);
     if (text === null) {
       // eslint-disable-next-line no-console
       console.log(chat.streamOutput ? "（超时或本句只有情绪无台词）" : `${persona.data.name} > （超时或本句只有情绪无台词）`);
@@ -424,6 +455,7 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
 
   rl.close();
   clearInterval(driveTimer);
+  chat.recognizer.dispose();
   await chat.rt.dispose();
   // eslint-disable-next-line no-console
   console.log("已退出。长期记忆与历史已保存。");
