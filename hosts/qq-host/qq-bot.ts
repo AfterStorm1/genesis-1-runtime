@@ -174,6 +174,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
               message: chunk,
             }, config.token);
           }
+          // eslint-disable-next-line no-console
+          console.log(`[qq-bot] 已回复群 ${groupId}（语音）：${reply.slice(0, 40)}${reply.length > 40 ? "…" : ""}`);
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error(`[qq-bot] 群 ${groupId} 语音转写失败：${err instanceof Error ? err.message : String(err)}`);
@@ -199,6 +201,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           message: chunk,
         }, config.token);
       }
+      // eslint-disable-next-line no-console
+      console.log(`[qq-bot] 已回复群 ${groupId}：${reply.slice(0, 40)}${reply.length > 40 ? "…" : ""}`);
     });
   };
 
