@@ -31,13 +31,13 @@ export function buildRecognizeScript(opts?: SapiSpeechRecognizerOptions): string
     `[Console]::OutputEncoding = [Text.Encoding]::UTF8; ` +
     `try { ` +
     `Add-Type -AssemblyName System.Speech; ` +
-    `$c = New-Object System.Globalization.CultureInfo('${culture}'); ` +
-    `$r = New-Object System.Speech.Recognition.SpeechRecognitionEngine($c); ` +
+    `$c = [System.Globalization.CultureInfo]::new('${culture}'); ` +
+    `$r = [System.Speech.Recognition.SpeechRecognitionEngine]::new($c); ` +
     `$r.InitialSilenceTimeout = [TimeSpan]::FromSeconds(${silence}); ` +
     `$r.BabbleTimeout = [TimeSpan]::FromSeconds(${babble}); ` +
     `$r.EndSilenceTimeout = [TimeSpan]::FromSeconds(${endSilence}); ` +
     `$r.SetInputToDefaultAudioDevice(); ` +
-    `$r.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar())); ` +
+    `$r.LoadGrammar([System.Speech.Recognition.DictationGrammar]::new()); ` +
     `$res = $r.Recognize(); if ($res) { Write-Output $res.Text }; $r.Dispose() ` +
     `} catch { ` +
     `Write-Output ("STT_ERR: " + $_.Exception.Message); exit 2 ` +
