@@ -1,4 +1,4 @@
 Genesis-1 evidence: naming-report
 result: local pass
 CI: pass (GitHub Actions, 见 ci-status.md)
-files scanned: 83; banned aliases: 0 hits; positive names present
+files scanned: 84; banned aliases: 0 hits; positive names present
