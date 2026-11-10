@@ -1,0 +1,4 @@
+Genesis-1 evidence: sapi-recognizer.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+script shape: utf8/culture/timeouts/dictation

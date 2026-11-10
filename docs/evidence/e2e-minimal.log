@@ -1,3 +1,6 @@
+Genesis-1 evidence: e2e-minimal
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
 Genesis-1 e2e-minimal.log (A14)
 result: local pass
 CI: pass (GitHub Actions, 见 ci-status.md)

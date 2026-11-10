@@ -1,0 +1,4 @@
+Genesis-1 evidence: emotion-bias-hook.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+note injection; passthrough non-user

@@ -1,0 +1,4 @@
+Genesis-1 evidence: emotion-state-machine.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+transition table; decay; self-talk threshold+cooldown; classify

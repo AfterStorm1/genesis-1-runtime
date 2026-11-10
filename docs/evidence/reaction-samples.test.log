@@ -1,0 +1,4 @@
+Genesis-1 evidence: reaction-samples.test
+result: local pass
+CI: pass (GitHub Actions, 见 ci-status.md)
+load/validate; few-shot block; keyword matching

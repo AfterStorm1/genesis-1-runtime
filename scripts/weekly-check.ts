@@ -54,13 +54,14 @@ function tryExec(cmd: string, args: string[], timeoutMs = 300_000): { ok: boolea
   }
 }
 
-/** 子进程受限（沙箱 EPERM）与真实失败区分：EPERM → SKIP，其余 → FAIL */
+/** 子进程受限（沙箱 EPERM）与真实失败区分：EPERM → SKIP，其余 → FAIL；detail 去掉 ANSI 彩色码 */
 function execStep(name: string, hard: boolean, cmd: string, args: string[]): void {
   add(name, hard, () => {
     const { ok, out } = tryExec(cmd, args);
-    if (ok) return { status: "PASS", detail: out.split("\n").slice(-2).join(" | ") || "ok" };
-    if (out.includes("EPERM")) return { status: "SKIP", detail: "运行环境不允许子进程（沙箱）" };
-    return { status: "FAIL", detail: out };
+    const clean = out.replace(/\u001b\[[0-9;]*m/g, "");
+    if (ok) return { status: "PASS", detail: clean.split("\n").slice(-2).join(" | ") || "ok" };
+    if (clean.includes("EPERM")) return { status: "SKIP", detail: "运行环境不允许子进程（沙箱）" };
+    return { status: "FAIL", detail: clean };
   });
 }
 
@@ -221,9 +222,9 @@ async function main(): Promise<void> {
     return { status: bad === 0 ? "PASS" : "WARN", detail: `${files.length} 个文件，${lines} 行，坏行 ${bad}` };
   });
 
-  // 9. git 状态（软）
+  // 9. git 状态（软；排除自检本身会重写的证据日志，只看代码/配置变更）
   add("git-status", false, () => {
-    const { ok, out } = tryExec("git", ["status", "--porcelain"]);
+    const { ok, out } = tryExec("git", ["status", "--porcelain", "--", ":!docs/evidence"]);
     if (!ok) return { status: "SKIP", detail: "无法运行 git" };
     const n = out === "" ? 0 : out.split("\n").length;
     return { status: n === 0 ? "PASS" : "WARN", detail: n === 0 ? "工作区干净" : `${n} 处未提交变更（记得提交并推送）` };

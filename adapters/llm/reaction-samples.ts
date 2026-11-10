@@ -74,8 +74,15 @@ export function buildFewShotBlock(samples: ReactionSample[]): string {
   return `[反应样本——标准反应参考（仅作语气校准，非硬性台词）]\n${lines.join("\n")}`;
 }
 
-/** 验收判定：回复包含任一期望关键词（英文不区分大小写） */
+/** 全角 → 半角（中文输入法常把 ? ! , 打成全角，比对前统一；全角空格转半角） */
+export function toHalfWidth(s: string): string {
+  return s
+    .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+    .replace(/\u3000/g, " ");
+}
+
+/** 验收判定：回复包含任一期望关键词（英文不区分大小写；全角/半角视为同一字符） */
 export function matchesExpected(reply: string, expected: string[]): boolean {
-  const r = reply.toLowerCase();
-  return expected.some((k) => k !== "" && r.includes(k.toLowerCase()));
+  const r = toHalfWidth(reply).toLowerCase();
+  return expected.some((k) => k !== "" && r.includes(toHalfWidth(k).toLowerCase()));
 }
