@@ -1,4 +1,4 @@
-# STT 诊断脚本：检查语音识别引擎 / 默认麦克风 / 试识别一句
+﻿# STT 诊断脚本：检查语音识别引擎 / 默认麦克风 / 试识别一句
 # 用法：powershell -NoProfile -ExecutionPolicy Bypass -File scripts\diag-stt.ps1
 $ErrorActionPreference = "Continue"
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
