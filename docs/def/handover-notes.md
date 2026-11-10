@@ -23,9 +23,12 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 4. 在线 LLM：`llm-config.cmd`（已被 git 忽略）保存 key，模板见 `llm-config.example.cmd`；
    环境变量优先级：LLM_API_KEY 存在即在线（LLM_BASE_URL/LLM_MODEL），否则本地（OLLAMA_*）。
 5. 聊天数据：`data/chat-history/`（每角色一个 .jsonl + .longterm.jsonl），已被 git 忽略。
-6. 一键入口：`chat.cmd`（聊天）、`verify.cmd`（本地 10 步复验，含刷新 HANDOVER.md）。
+6. 一键入口：`chat.cmd`（聊天，默认人格「蕙」+ 默认规则 hui-rules.md）、`verify.cmd`（本地 10 步复验，含刷新 HANDOVER.md）。
 7. 人工配置：人格/世界观/任务/对话偏向/模型/记忆参数全部入口见 `docs/def/manual-config-guide.md`；
    新增可配项：CHAT_WORLD_RULES（规则文件）、CHAT_EXTRA_SYSTEM（追加规则）、CHAT_TEMPERATURE。
+8. 主角「蕙」已录入：人格卡 `config/persona/hui.persona.json`、规则 `config/world/hui-rules.md`；
+   语言过滤表后处理 `adapters/llm/speech-postprocess.ts`（不进 prompt）；最高优先级终止规则
+   `adapters/safety-guard/termination-hook.ts`（PipelineHook 输入侧强制，越界后永久只回“连接中断...”）。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 
