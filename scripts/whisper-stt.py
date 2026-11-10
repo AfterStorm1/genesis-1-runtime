@@ -7,6 +7,9 @@ import os
 import sys
 
 os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+# 缓存放进项目自己的 data 目录：规避用户目录 .cache 的权限问题（WinError 5）
+_RUNTIME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.environ.setdefault("HF_HOME", os.path.join(_RUNTIME, "data", "hf-cache"))
 
 
 def main() -> None:
