@@ -49,6 +49,12 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 16. QQ 群机器人宿主（值级）：`hosts/qq-host/qq-bot.ts`（OneBot 11 正向 WS，适配 NapCatQQ；每群独立运行时
     记忆隔离、@或触发词应答、冷却防刷、群聊关 TTS/流式）；`qq-chat.cmd` 启动；ChatRuntimeOptions 增加
     historyDir/tts/stream/emotion 覆盖。⚠️ 非官方协议有封号风险，建议专用小号。
+17. 统一语音转写底座（Phase 1，值级）：`adapters/stt/voice-source.ts`（音频源抽象：file/device/network 三类，
+    新增场景=新增 Source）+ `transcriber-core.ts`（TranscriberCore 抽象：probe/transcribeFile/transcribeStream）
+    + `whisper-engine.ts`（whisper.cpp 双模式实现：ffmpeg 转码 + whisper-cli 文件 / whisper-stream 流式，
+    零 npm 依赖，引擎缺失优雅降级+下载指引）+ `scripts/voice.ts`/`voice.cmd`（probe/file/listen 三个入口）。
+    待装：tools/whisper/{whisper-cli,whisper-stream,ggml-*.bin} + tools/ffmpeg/ffmpeg.exe。
+    后续 Phase：VRChat NetSource（UDP Opus）、电话音频桥、宿主接线（QQ/飞书语音消息）。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 
