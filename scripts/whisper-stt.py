@@ -11,6 +11,21 @@ os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 _RUNTIME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault("HF_HOME", os.path.join(_RUNTIME, "data", "hf-cache"))
 
+# 兼容垫片：新版 PyAV 移除了 metadata_errors 参数，而 faster-whisper 仍在传它。
+# 在 av.open 上包一层，摘掉该参数（语义不变：只是忽略元数据错误）。
+try:
+    import av as _av
+
+    _orig_open = _av.open
+
+    def _open_compat(*args, **kwargs):
+        kwargs.pop("metadata_errors", None)
+        return _orig_open(*args, **kwargs)
+
+    _av.open = _open_compat  # type: ignore[assignment]
+except Exception:
+    pass  # 若未来不再需要，静默跳过
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
