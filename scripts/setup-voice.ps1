@@ -11,12 +11,19 @@ $FfmpegDir = Join-Path $Root "tools\ffmpeg"
 $Tmp = Join-Path $env:TEMP ("genesis-voice-setup-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $WhisperDir, $FfmpegDir, $Tmp | Out-Null
 
+# 全程时间护栏：超过 12 分钟直接放弃（换方向，别死等）
+$Sw = [Diagnostics.Stopwatch]::StartNew()
+$DeadlineMinutes = 12
+
 function Download-File([string]$Url, [string]$Out, [string[]]$Fallbacks) {
   $urls = @($Url) + $Fallbacks
   foreach ($u in $urls) {
+    if ($Sw.Elapsed.TotalMinutes -gt $DeadlineMinutes) {
+      throw "安装超时（已超过 $DeadlineMinutes 分钟，网络可能太慢）。建议：稍后重跑，或跳过语音引擎先做别的。"
+    }
     try {
       Write-Host ("  下载 " + $u)
-      Invoke-WebRequest -Uri $u -OutFile $Out -TimeoutSec 900
+      Invoke-WebRequest -Uri $u -OutFile $Out -TimeoutSec 300
       if ((Get-Item $Out).Length -gt 1024) { Write-Host ("    完成 " + [math]::Round((Get-Item $Out).Length/1MB, 1) + " MB"); return }
     } catch {
       Write-Host ("    失败（" + $_.Exception.Message + "），尝试备用地址…")
