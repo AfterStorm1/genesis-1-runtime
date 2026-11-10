@@ -114,6 +114,26 @@ export function parseStreamLine(line: string): string | null {
   return t;
 }
 
+/** 麦克风录音参数（导出供测试）：venv python → whisper-stt.py record <wav> */
+export function buildRecordArgs(pythonExe: string, outPath: string, seconds: number): { cmd: string; args: string[]; env: NodeJS.ProcessEnv } {
+  return {
+    cmd: pythonExe,
+    args: [path.join(process.cwd(), "scripts", "whisper-stt.py"), "record", outPath],
+    env: { ...process.env, STT_RECORD_SECONDS: String(seconds) },
+  };
+}
+
+/** 用默认麦克风录音到 wav（/说 用；配合云端转写实现高质量语音输入） */
+export async function recordToFile(outPath: string, seconds = 8): Promise<void> {
+  const paths = resolveEnginePaths();
+  if (paths.pythonExe === undefined || !fs.existsSync(paths.pythonExe)) {
+    throw new Error("录音组件未安装（请先运行 setup-voice.cmd 装 Python 后端）");
+  }
+  const { cmd, args, env } = buildRecordArgs(paths.pythonExe, outPath, seconds);
+  const r = await runQuiet(cmd, args);
+  if (r.code !== 0) throw new Error(`录音失败(code ${r.code}): ${r.out.slice(-300)}`);
+}
+
 function runQuiet(cmd: string, args: string[], cwd?: string): Promise<{ code: number | null; out: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { cwd });

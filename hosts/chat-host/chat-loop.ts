@@ -1,10 +1,18 @@
 // Genesis-1 · 聊天宿主：终端交互循环（runChatLoop）
 // 职责：输入读取、命令分发（/记忆 /忘记 /情绪 /说 /quit）、情绪事件、长期记忆提炼、
 //       情绪驱动（每 60s tick → 自主开口）、终止状态处理。
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import readline from "node:readline";
 import { COGNITION_CONTRACT_VERSION } from "../../core/contract/cognition";
+import { createWhisperCppEngine, recordToFile } from "../../adapters/stt/whisper-engine";
+import { fileSource } from "../../adapters/stt/voice-source";
 import type { ChatRuntime } from "./chat-runtime";
 import { sendUserMessage } from "./chat-runtime";
+
+/** 语音转写引擎（/说 用：cloud→bin→py 自动选择，引擎未装时回退系统识别） */
+const sttEngine = createWhisperCppEngine();
 
 /** 终端交互循环（/quit 退出；/忘记 关键词 遗忘；/记忆 查看；/情绪 查看；/说 语音输入） */
 export async function runChatLoop(chat: ChatRuntime): Promise<void> {
@@ -113,25 +121,55 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       continue;
     }
 
-    // —— 语音输入（/说）：Windows SAPI 识别一句，识别的文本走与打字完全相同的回复路径 ——
+    // —— 语音输入（/说）：优先 whisper 引擎（录音→云端转写，有 STT_CLOUD_KEY 时质量最好）；
+    //     引擎未装时回退 Windows SAPI。识别的文本走与打字完全相同的回复路径 ——
     let userText = trimmed;
     if (trimmed === "/说") {
-      // eslint-disable-next-line no-console
-      console.log("（正在听…请对着麦克风说话，最长 10 秒）");
-      try {
-        const heard = await chat.recognizer.recognize(12_000);
-        if (heard.trim() === "") {
+      const sttProbe = sttEngine.probe();
+      if (sttProbe.mode !== "none") {
+        // eslint-disable-next-line no-console
+        console.log(`（正在听…请说话，约 8 秒；后端 ${sttProbe.mode}）`);
+        const tmp = path.join(os.tmpdir(), `genesis-say-${Date.now()}.wav`);
+        try {
+          await recordToFile(tmp, 8);
+          const heard = await sttEngine.transcribeFile(fileSource(tmp, "麦克风"));
+          if (heard.trim() === "") {
+            // eslint-disable-next-line no-console
+            console.log("（没听清，说 /说 再试一次）");
+            continue;
+          }
           // eslint-disable-next-line no-console
-          console.log("（没听清，说 /说 再试一次）");
+          console.log(`你(语音) > ${heard}`);
+          userText = heard;
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.log(`[stt] 识别失败：${err instanceof Error ? err.message : String(err)}`);
+          continue;
+        } finally {
+          try {
+            fs.rmSync(tmp, { force: true });
+          } catch {
+            /* 忽略清理失败 */
+          }
+        }
+      } else {
+        // eslint-disable-next-line no-console
+        console.log("（正在听…请对着麦克风说话，最长 10 秒；系统识别）");
+        try {
+          const heard = await chat.recognizer.recognize(12_000);
+          if (heard.trim() === "") {
+            // eslint-disable-next-line no-console
+            console.log("（没听清，说 /说 再试一次）");
+            continue;
+          }
+          // eslint-disable-next-line no-console
+          console.log(`你(语音) > ${heard}`);
+          userText = heard;
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.log(`[stt] 识别失败：${err instanceof Error ? err.message : String(err)}（需要 Windows 中文语音识别语言包）`);
           continue;
         }
-        // eslint-disable-next-line no-console
-        console.log(`你(语音) > ${heard}`);
-        userText = heard;
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.log(`[stt] 识别失败：${err instanceof Error ? err.message : String(err)}（需要 Windows 中文语音识别语言包）`);
-        continue;
       }
     }
 

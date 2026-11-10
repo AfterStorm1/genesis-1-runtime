@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildFfmpegArgs,
+  buildRecordArgs,
   buildWhisperFileArgs,
   buildWhisperStreamArgs,
   parseStreamLine,
@@ -13,6 +14,13 @@ import {
 import { writeEvidenceLog } from "../helpers/evidence";
 
 describe("whisper engine (arg building + probe)", () => {
+  it("录音参数：venv python → whisper-stt.py record，秒数经环境变量传入", () => {
+    const r = buildRecordArgs("D:/x/python.exe", "D:/x/out.wav", 8);
+    expect(r.cmd).toBe("D:/x/python.exe");
+    expect(r.args[1]).toBe("record");
+    expect(r.args[2]).toBe("D:/x/out.wav");
+    expect(r.env.STT_RECORD_SECONDS).toBe("8");
+  });
   it("ffmpeg 转码参数：16k 单声道 pcm wav", () => {
     expect(buildFfmpegArgs("a.amr", "b.wav")).toEqual([
       "-y", "-i", "a.amr", "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", "b.wav",

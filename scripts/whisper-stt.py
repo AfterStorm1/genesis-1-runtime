@@ -36,10 +36,33 @@ def _transcribe_kwargs() -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["file", "stream"])
+    ap.add_argument("mode", choices=["file", "stream", "record"])
     ap.add_argument("path", nargs="?")
     ap.add_argument("--model-size", default=os.environ.get("WHISPER_MODEL_SIZE", "base"))
     args = ap.parse_args()
+
+    # record：默认麦克风录音 N 秒存为 16k wav（供 /说 与云端转写配合）
+    if args.mode == "record":
+        if not args.path:
+            print("missing path", file=sys.stderr)
+            sys.exit(2)
+        import wave
+
+        import numpy as np
+        import sounddevice as sd
+
+        secs = float(os.environ.get("STT_RECORD_SECONDS", "8"))
+        fs = 16000
+        print(f"[stt] 录音 {secs:g} 秒…", flush=True)
+        audio = sd.rec(int(fs * secs), samplerate=fs, channels=1, dtype="float32")
+        sd.wait()
+        with wave.open(args.path, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(fs)
+            w.writeframes((audio * 32767).astype(np.int16).tobytes())
+        print("[stt] 录音完成", flush=True)
+        return
 
     from faster_whisper import WhisperModel
 
