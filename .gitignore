@@ -9,3 +9,4 @@ data/
 .dbg/
 *.log.tmp
 *.lnk
+test-voice.wav
