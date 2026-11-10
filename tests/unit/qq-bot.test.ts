@@ -1,6 +1,6 @@
 // QQ 群机器人宿主：事件解析/触发判定/清洗/分条（纯逻辑测试；WS/HTTP 需真实 OneBot 服务）
 import { describe, expect, it } from "vitest";
-import { extractUserText, isGroupMessage, splitForSend, stripCqCodes } from "../../hosts/qq-host/qq-bot";
+import { extractCqFile, extractUserText, isGroupMessage, splitForSend, stripCqCodes } from "../../hosts/qq-host/qq-bot";
 import { writeEvidenceLog } from "../helpers/evidence";
 
 describe("qq bot (onebot 11 parsing)", () => {
@@ -49,7 +49,15 @@ describe("qq bot (onebot 11 parsing)", () => {
     expect(parts.join("")).toBe(long);
   });
 
+  it("extractCqFile：从 CQ 码提取语音/图片 file 路径", () => {
+    expect(extractCqFile("[CQ:record,file=C:/napcat/cache/abc.amr,magic=1]", "record")).toBe(
+      "C:/napcat/cache/abc.amr",
+    );
+    expect(extractCqFile("[CQ:image,file=img.png]", "record")).toBeNull();
+    expect(extractCqFile("纯文本", "record")).toBeNull();
+  });
+
   it("写入 qq-bot 证据产物", () => {
-    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; chunking"], true);
+    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice file extract; chunking"], true);
   });
 });

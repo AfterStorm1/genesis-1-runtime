@@ -1,10 +1,16 @@
 // Genesis-1 · QQ 群机器人宿主（值级；OneBot 11 协议，适配 NapCatQQ）
 // 复用 createChatRuntime/sendUserMessage：每群一个运行时（记忆按群隔离、终止规则按群生效）。
 // 群聊模式：关闭 TTS 与流式（纯文本回复）；@机器人 或以触发词开头才应答；每群冷却防刷。
+// 语音消息：群里的 [CQ:record] 自动转写（云端/本地引擎）后按文本回复。
 // 运行：qq-chat.cmd；环境变量见 hosts/qq-host 文档与 qq-chat.cmd 默认值。
 import path from "node:path";
 import type { ChatRuntime } from "../chat-host/chat-runtime";
 import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
+import { createWhisperCppEngine } from "../../adapters/stt/whisper-engine";
+import { fileSource } from "../../adapters/stt/voice-source";
+
+/** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
+const sttEngine = createWhisperCppEngine();
 
 export interface QqBotConfig {
   /** OneBot 正向 WebSocket 地址（NapCat 配置），默认 ws://127.0.0.1:3001 */
@@ -49,6 +55,12 @@ export function isGroupMessage(ev: unknown): ev is OneBotGroupEvent {
 /** 清洗 CQ 码（表情/图片/at 等）为纯文本（导出供测试） */
 export function stripCqCodes(text: string): string {
   return text.replace(/\[CQ:[^\]]*\]/g, "").trim();
+}
+
+/** 从 CQ 码提取指定类型的 file 路径（导出供测试）；如语音 [CQ:record,file=xxx] */
+export function extractCqFile(raw: string, type: string): string | null {
+  const m = raw.match(new RegExp(`\\[CQ:${type},file=([^,\\]]+)`));
+  return m !== null && m[1] !== undefined ? m[1].trim() : null;
 }
 
 /**
@@ -125,9 +137,41 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
 
   const handle = (ev: OneBotGroupEvent): void => {
     if (!isGroupMessage(ev) || ev.group_id === undefined || ev.self_id === undefined) return;
+    const groupId = String(ev.group_id);
+
+    // —— 语音消息：群里发语音 → 转写 → 按文本回复（无需 @/触发词，避免漏听）——
+    const recordFile = extractCqFile(ev.raw_message ?? "", "record");
+    if (recordFile !== null && recordFile !== "") {
+      enqueue(groupId, async () => {
+        const now = Date.now();
+        const last = lastReplyAt.get(groupId) ?? 0;
+        if (now - last < config.cooldownMs) return;
+        lastReplyAt.set(groupId, now);
+        const chat = await runtimeFor(groupId);
+        if (chat.guard.terminated) return;
+        try {
+          const heard = await sttEngine.transcribeFile(fileSource(recordFile, `qq-${groupId}`));
+          if (heard.trim() === "") return;
+          // eslint-disable-next-line no-console
+          console.log(`[qq-bot] 群 ${groupId} 语音转写：${heard}`);
+          const { text: reply } = await sendUserMessage(chat, heard);
+          if (reply === null || reply === "") return;
+          for (const chunk of splitForSend(reply, config.maxReplyLen)) {
+            await httpPost(config.httpBase, "/send_group_msg", {
+              group_id: ev.group_id,
+              message: chunk,
+            });
+          }
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`[qq-bot] 群 ${groupId} 语音转写失败：${err instanceof Error ? err.message : String(err)}`);
+        }
+      });
+      return;
+    }
+
     const text = extractUserText(ev, ev.self_id, config.trigger);
     if (text === null) return;
-    const groupId = String(ev.group_id);
     enqueue(groupId, async () => {
       const now = Date.now();
       const last = lastReplyAt.get(groupId) ?? 0;
