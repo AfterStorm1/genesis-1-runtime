@@ -31,7 +31,10 @@ function Find-WhisperAssetUrl() {
     $rels = Invoke-RestMethod -Uri "https://api.github.com/repos/ggml-org/whisper.cpp/releases?per_page=30" -TimeoutSec 60 -Headers @{ "User-Agent" = "genesis-setup" }
     foreach ($rel in $rels) {
       foreach ($a in $rel.assets) {
-        if ($a.name -like "whisper-bin*.zip" -or $a.name -like "*bin*x64*.zip" -or $a.name -like "whisper*.zip") {
+        # 只要 Windows 包：含 bin 且含 x64/win；排除 macOS(xcframework)/android/linux/arm 变体
+        $isWin = ($a.name -like "*bin*.zip") -and ($a.name -like "*x64*" -or $a.name -like "*win*")
+        $isForeign = $a.name -like "*xcframework*" -or $a.name -like "*android*" -or $a.name -like "*linux*" -or $a.name -like "*arm*" -or $a.name -like "*darwin*" -or $a.name -like "*macos*"
+        if ($isWin -and -not $isForeign) {
           Write-Host ("  选中：" + $rel.tag_name + " / " + $a.name)
           return $a.browser_download_url
         }
