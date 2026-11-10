@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { createFeelingMemory } from "../../adapters/llm/feeling-memory";
+import { createFeelingMemory } from "../../adapters/llm/memory/feeling-memory";
 import { writeEvidenceLog } from "../helpers/evidence";
 
 function tmpFile(): string {

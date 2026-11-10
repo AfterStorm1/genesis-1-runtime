@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { createLongTermMemory } from "../../adapters/llm/long-term-memory";
+import { createLongTermMemory } from "../../adapters/llm/memory/long-term-memory";
 import { writeEvidenceLog } from "../helpers/evidence";
 
 function tmpFile(): string {

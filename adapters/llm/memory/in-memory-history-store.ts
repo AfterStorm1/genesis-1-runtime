@@ -5,8 +5,8 @@
 // 通过 RuntimeConfig.memory 注入，不动契约。
 import fs from "node:fs";
 import path from "node:path";
-import type { MemoryStore, RecallResult } from "../../core/contract/memory";
-import type { CognitionInput } from "../../core/contract/cognition";
+import type { MemoryStore, RecallResult } from "../../../core/contract/memory";
+import type { CognitionInput } from "../../../core/contract/cognition";
 
 export interface InMemoryHistoryStoreOptions {
   /** 提示词默认取最近多少「轮」（一问一答 = 1 轮 = 2 条），默认 10 */

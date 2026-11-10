@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { createInMemoryHistoryStore } from "../../adapters/llm/in-memory-history-store";
+import { createInMemoryHistoryStore } from "../../adapters/llm/memory/in-memory-history-store";
 import { samplePersona } from "../helpers/fixtures";
 import type { CognitionInput } from "../../core/contract/cognition";
 import { writeEvidenceLog } from "../helpers/evidence";

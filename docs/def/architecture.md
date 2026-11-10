@@ -65,18 +65,27 @@ runtime/
 │   ├── l3-arbiter/           strategy-default（channelOf/shouldInterrupt）
 │   └── l35-scheduler/        fusion-default
 ├── adapters/                 值级扩展的落脚点（契约零改动）
-│   ├── llm/                  openai-compatible-cognition（双模式 LLM）
-│   │                         in-memory-history-store（对话记忆）
-│   │                         empty-cognition
-│   ├── renderers/            text / mock-speech / empty-vrchat
-│   └── perception/           empty-tracking-source / mock-internal-drive
-├── config/persona/           人格卡（example / kaguya）
+│   ├── llm/                  openai-compatible-cognition（双模式 LLM）+ summarizer（提炼）
+│   │   ├── memory/           ★记忆体系：in-memory-history-store（短期）/ long-term-memory（事实）
+│   │   │                     feeling-memory（第一人称感受）/ chat-memory（组合注入）+ barrel
+│   │   └── speech-postprocess / speech-segmenter / reaction-samples（输出流水线+样本库）
+│   ├── drive/                emotion-state-machine（情绪，轻量 InternalDrive）+ emotion-bias-hook
+│   ├── safety-guard/         termination-hook（最高优先级终止规则）
+│   ├── stt/ tts/             sapi-speech-recognizer（听）/ sapi-speaker（说）
+│   └── renderers/            text / streaming-text / mock-speech / tts-speech / empty-vrchat
+├── hosts/                    ★聊天宿主（2026-11 架构整理新增；组装与循环分离）
+│   └── chat-host/            chat-env（配置集中读取）/ memory-assembly（记忆装配）
+│                             chat-runtime（createChatRuntime+sendUserMessage）/ chat-loop（终端循环）
+├── config/persona/           人格卡（example / kaguya / hui）
+├── config/world/             规则文件（rules.example / hui-rules）
+├── config/reactions/         反应样本库（few-shot + 自检题集）
 ├── main.ts                   12 步 e2e demo（A14）
-├── demo-chat.ts              交互式聊天（导出 createChatRuntime / sendUserMessage / runChatLoop）
-├── chat.cmd / verify.cmd     一键入口 / 一键复验
-├── tests/                    24+ 测试文件（A01a–A17 映射见各文件头注释）
+├── demo-chat.ts              聊天入口薄壳（再导出 hosts/chat-host/；chat.cmd 调用它）
+├── chat.cmd / verify.cmd / weekly-check.cmd   一键聊天 / 一键复验 / 每周自检
+├── tests/                    35+ 测试文件（A01a–A17 映射见各文件头注释）
 ├── scripts/                  scan-validate-at / payload-shape / bench ×2 / gen-evidence
-└── docs/def/ docs/evidence/  deviations / pending-types / architecture / 证据产物
+│                             gen-handover（交接文档）/ weekly-check（每周自检）/ diag-stt
+└── docs/def/ docs/evidence/  deviations / pending-types / architecture / manual-config-guide / 证据产物
 ```
 
 ## 4. 扩展配方（常用四例）
@@ -120,10 +129,10 @@ const rt = await compose({
 
 ### 4.4 把聊天挂到别的界面（Web/QQ/Telegram）
 
-复用 `demo-chat.ts` 导出的 `createChatRuntime()` + `sendUserMessage(chat, text)`：
+复用 `hosts/chat-host`（`demo-chat.ts` 再导出）的 `createChatRuntime()` + `sendUserMessage(chat, text)`：
 它们是纯函数式接口，不依赖终端；终端循环只是其中一个宿主（`runChatLoop`）。
 
-## 5. 铁律速查（实现时最常踩的 10 条）
+## 5. 铁律速查（实现时最常踩的 11 条）
 
 1. core/ 不 import adapters/、layers/；唯一装配点 composition/。
 2. 跨层只走契约；L4 只读 `speech.sanitizedText.text`。
@@ -135,3 +144,4 @@ const rt = await compose({
 8. 默认 aggregator 由 l3Tick 直调，不经 Hub；Hub 不持有 arbiter/dispatcher。
 9. 全局唯一 id：runtimeId:sourceId:monotonic 或 UUIDv7。
 10. 扩展先按「值/形状/拓扑」三档判定；不确定按更高档 + DEF 打分。
+11. 宿主代码放 hosts/（组装/循环/配置分离），adapter 不 import host；记忆类新能力进 adapters/llm/memory/。

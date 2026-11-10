@@ -1,7 +1,7 @@
 // Genesis-1 · 组合记忆（短期轮次 + 长期事实库 + 第一人称感受库），作为单个 MemoryStore 注入 RuntimeConfig.memory
 // recall 返回顺序：感受条目（role="feeling"，情绪词+内容）→ 事实条目（role="memory"）→ 最近轮次。
-import type { MemoryStore, RecallResult } from "../../core/contract/memory";
-import type { CognitionInput } from "../../core/contract/cognition";
+import type { MemoryStore, RecallResult } from "../../../core/contract/memory";
+import type { CognitionInput } from "../../../core/contract/cognition";
 import type { InMemoryHistoryStore } from "./in-memory-history-store";
 import type { LongTermMemory } from "./long-term-memory";
 import type { FeelingMemory } from "./feeling-memory";
