@@ -13,7 +13,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("mode", choices=["file", "stream"])
     ap.add_argument("path", nargs="?")
-    ap.add_argument("--model-size", default="small")
+    ap.add_argument("--model-size", default=os.environ.get("WHISPER_MODEL_SIZE", "base"))
     args = ap.parse_args()
 
     from faster_whisper import WhisperModel
