@@ -11,6 +11,8 @@ export interface StreamingTextRendererOptions {
   charDelayMs?: number;
   /** 句间延迟，默认 300ms */
   sentenceDelayMs?: number;
+  /** 句间换行（默认 false：单行输出，句间用空格+停顿） */
+  newlinePerSentence?: boolean;
   /** 输出通道，默认 process.stdout.write */
   write?: (chunk: string) => void;
 }
@@ -26,6 +28,7 @@ export interface StreamingTextRenderer extends Renderer {
 export function createStreamingTextRenderer(opts?: StreamingTextRendererOptions): StreamingTextRenderer {
   const charDelay = opts?.charDelayMs ?? 25;
   const sentenceDelay = opts?.sentenceDelayMs ?? 300;
+  const sentenceSep = opts?.newlinePerSentence === true ? "\n" : " ";
   const write = opts?.write ?? ((chunk: string) => process.stdout.write(chunk));
   const timers = new Set<ReturnType<typeof setTimeout>>();
   const applied: ExpressionSignal[] = [];
@@ -58,7 +61,7 @@ export function createStreamingTextRenderer(opts?: StreamingTextRendererOptions)
       let ci = 0;
       const nextChar = (): void => {
         if (disposed || ci >= line.length) {
-          if (!disposed) write("\n");
+          if (!disposed) write(sentenceSep);
           later(sentenceDelay, nextLine);
           return;
         }

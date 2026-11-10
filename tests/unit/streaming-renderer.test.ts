@@ -24,7 +24,7 @@ function signalWith(text: string): ExpressionSignal {
 describe("streaming text renderer", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("逐字输出 + 句间延迟：输出序列完整且节奏正确", async () => {
+  it("逐字输出 + 句间停顿：单行输出（句间空格分隔）", async () => {
     vi.useFakeTimers();
     const chunks: string[] = [];
     const r = createStreamingTextRenderer({ charDelayMs: 10, sentenceDelayMs: 50, write: (c) => chunks.push(c) });
@@ -32,9 +32,9 @@ describe("streaming text renderer", () => {
     // 第一行“坐吧”3 字：首字立即 + 2×10ms
     await vi.advanceTimersByTimeAsync(25);
     expect(chunks.join("")).toContain("坐吧");
-    // 句间 50ms + 第二行逐字
+    // 句间 50ms + 第二行逐字；句间是空格不是换行
     await vi.advanceTimersByTimeAsync(200);
-    expect(chunks.join("")).toContain("坐吧\n好……");
+    expect(chunks.join("")).toContain("坐吧 好……");
     r.dispose();
   });
 

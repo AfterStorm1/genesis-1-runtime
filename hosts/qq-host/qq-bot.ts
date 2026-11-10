@@ -305,7 +305,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           console.log(`[qq-bot] 群 ${groupId} 语音转写：${heard}`);
           const { text: reply } = await sendUserMessage(chat, heard);
           if (reply === null || reply === "") return;
-          for (const chunk of splitForSend(reply, config.maxReplyLen)) {
+          const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
+          for (const chunk of splitForSend(flat, config.maxReplyLen)) {
             await httpPost(config.httpBase, "/send_group_msg", {
               group_id: ev.group_id,
               message: chunk,
@@ -342,7 +343,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
       const { text: reply } = await sendUserMessage(chat, text);
       if (reply === null || reply === "") return;
-      for (const chunk of splitForSend(reply, config.maxReplyLen)) {
+      const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
+      for (const chunk of splitForSend(flat, config.maxReplyLen)) {
         await httpPost(config.httpBase, "/send_group_msg", {
           group_id: ev.group_id,
           message: chunk,
