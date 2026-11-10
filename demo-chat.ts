@@ -18,6 +18,8 @@
 //   CHAT_TEMPERATURE   采样温度（默认 0.7；低=稳重，高=跳脱）
 //   CHAT_STREAM        流式输出开关（默认 1 开启；0 回退整段打印）
 //   CHAT_CHAR_DELAY    流式逐字延迟 ms（默认 25）  CHAT_SENTENCE_DELAY 句间延迟 ms（默认 300）
+//   CHAT_TTS           语音输出开关（默认 1：Windows SAPI 离线朗读；0 关闭）
+//   CHAT_TTS_RATE      SAPI 语速 -10（慢）~10（快），默认 0
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
@@ -38,6 +40,8 @@ import type { TerminationHook } from "./adapters/safety-guard/termination-hook";
 import { createMockSpeechRenderer } from "./adapters/renderers/mock-speech-renderer";
 import { createStreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
 import type { StreamingTextRenderer } from "./adapters/renderers/streaming-text-renderer";
+import { createTtsSpeechRenderer } from "./adapters/renderers/tts-speech-renderer";
+import { createSapiSpeaker } from "./adapters/tts/sapi-speaker";
 import { createTextRenderer } from "./adapters/renderers/text-renderer";
 import type { PersonaCardV3 } from "./core/contract/persona";
 
@@ -145,11 +149,18 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
       })
     : createTextRenderer();
 
+  // 语音输出（默认开启）：Windows SAPI 离线朗读；CHAT_TTS=0 回退静音 Mock（保持 feedback 回路）
+  const ttsOn = (process.env.CHAT_TTS ?? "1") !== "0";
+  const ttsRate = Number(process.env.CHAT_TTS_RATE);
+  const speechRenderer = ttsOn
+    ? createTtsSpeechRenderer({ speaker: createSapiSpeaker({ rate: Number.isFinite(ttsRate) ? ttsRate : 0 }) })
+    : createMockSpeechRenderer();
+
   const rt = await compose({
     runtimeId: "rt:chat",
     personaId: "persona:chat",
     frameHz: 10,
-    renderers: [textRenderer, createMockSpeechRenderer()],
+    renderers: [textRenderer, speechRenderer],
     parameters: [],
     cognition: createOpenAiCompatibleCognition({
       persona,

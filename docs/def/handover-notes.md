@@ -32,11 +32,13 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 9. 流式输出（渲染层）：`adapters/llm/speech-segmenter.ts` 切分 + `adapters/renderers/streaming-text-renderer.ts`
    打字机打印（默认开启；CHAT_STREAM=0 关闭，CHAT_CHAR_DELAY/CHAT_SENTENCE_DELAY 调节奏）。
    真·token 级提前输出为形状级演进（见 deviations D-23）。
+10. TTS 语音输出：`adapters/tts/sapi-speaker.ts`（Windows SAPI 离线朗读）+ `adapters/renderers/tts-speech-renderer.ts`
+    （默认开启；CHAT_TTS=0 关闭，CHAT_TTS_RATE 调语速 -10~10）。Speaker 抽象可替换 edge-tts/piper。
 
 ## 下一步候选（按推荐顺序，均待拍板）
 
-1. TTS 接真实语音（形状级：需动 feedback 契约，先三档判定评审）；
-2. Live2D / VRChat OSC（形状级，同上）；
+1. 高音质 TTS（edge-tts/piper 替换 SAPI Speaker，值级）；
+2. Live2D / VRChat OSC（形状级，先三档判定评审）；
 3. Web 聊天宿主（复用 demo-chat 导出的 createChatRuntime/sendUserMessage，值级）；
 4. 多角色共存 demo（sharedBus 已预留，值级可先跑）；
 5. 长期记忆向量化（把 long-term-memory 换成 embedding 检索，值级）；
