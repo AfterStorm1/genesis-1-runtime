@@ -25,28 +25,24 @@ function Download-File([string]$Url, [string]$Out, [string[]]$Fallbacks) {
   throw "下载失败：" + $Url
 }
 
-# 0. 自动发现 whisper.cpp 预编译包的真实下载地址
+# 0. 自动发现 whisper.cpp 预编译包的真实下载地址（从新到旧找第一个仍带 zip 的 release）
 function Find-WhisperAssetUrl() {
-  # 方式一：GitHub API 列最新 release 资源（不依赖版本号；同时打印真实资源名便于排查）
-  foreach ($api in @("https://api.github.com/repos/ggml-org/whisper.cpp/releases/latest")) {
-    try {
-      $rel = Invoke-RestMethod -Uri $api -TimeoutSec 60 -Headers @{ "User-Agent" = "genesis-setup" }
-      Write-Host ("  最新版本：" + $rel.tag_name)
-      $names = ($rel.assets | ForEach-Object { $_.name }) -join ", "
-      Write-Host ("  资源列表：" + $names)
+  try {
+    $rels = Invoke-RestMethod -Uri "https://api.github.com/repos/ggml-org/whisper.cpp/releases?per_page=30" -TimeoutSec 60 -Headers @{ "User-Agent" = "genesis-setup" }
+    foreach ($rel in $rels) {
       foreach ($a in $rel.assets) {
         if ($a.name -like "whisper-bin*.zip" -or $a.name -like "*bin*x64*.zip" -or $a.name -like "whisper*.zip") {
-          Write-Host "  选中资源：" $a.name
+          Write-Host ("  选中：" + $rel.tag_name + " / " + $a.name)
           return $a.browser_download_url
         }
       }
-      Write-Host "  最新 release 无匹配资源，改用候选版本…"
-    } catch {
-      Write-Host ("  API 查询失败（" + $_.Exception.Message + "），改用候选版本…")
     }
+    Write-Host "  近 30 个 release 均无 zip 资源，改用候选版本探测…"
+  } catch {
+    Write-Host ("  API 查询失败（" + $_.Exception.Message + "），改用候选版本探测…")
   }
-  # 方式二：候选版本与资源名逐个探测（最新版本号放最前）
-  foreach ($v in @($rel.tag_name, "v1.7.5", "v1.7.4", "v1.7.3", "v1.7.2", "v1.7.1", "v1.7.0", "v1.6.2")) {
+  # 方式二：候选版本与资源名逐个探测
+  foreach ($v in @("v1.7.5", "v1.7.4", "v1.7.3", "v1.7.2", "v1.7.1", "v1.7.0", "v1.6.2")) {
     foreach ($name in @("whisper-bin-x64.zip", "whisper-bin-x64-$v.zip", "whisper-bin.zip")) {
       $url = "https://github.com/ggml-org/whisper.cpp/releases/download/$v/$name"
       try {
@@ -58,24 +54,55 @@ function Find-WhisperAssetUrl() {
   return $null
 }
 
-# 1. whisper.cpp 预编译包（含 whisper-cli.exe / whisper-stream.exe）
+# 1. whisper.cpp 预编译包（含 whisper-cli.exe / whisper-stream.exe）；失败则回退 Python 后端
 $WZip = Join-Path $Tmp "whisper.zip"
 Write-Host "== 1/3 whisper.cpp =="
 $wUrl = Find-WhisperAssetUrl
+$usePy = $false
 if ($null -eq $wUrl) {
-  throw "找不到 whisper.cpp 下载地址。请手动到 https://github.com/ggml-org/whisper.cpp/releases 下载 whisper-bin-x64.zip，解压出 whisper-cli.exe 与 whisper-stream.exe 放入 tools\whisper\ 后重新运行本脚本。"
+  Write-Host "  whisper.cpp 二进制不可得，改用 Python 后端（faster-whisper）…"
+  $usePy = $true
+} else {
+  try {
+    Download-File $wUrl $WZip @(
+      ("https://ghfast.top/" + $wUrl),
+      ("https://mirror.ghproxy.com/" + $wUrl)
+    )
+    Expand-Archive -Path $WZip -DestinationPath (Join-Path $Tmp "whisper") -Force
+    $cli = Get-ChildItem -Path (Join-Path $Tmp "whisper") -Recurse -Filter "whisper-cli.exe" | Select-Object -First 1
+    $stm = Get-ChildItem -Path (Join-Path $Tmp "whisper") -Recurse -Filter "whisper-stream.exe" | Select-Object -First 1
+    if ($null -eq $cli -or $null -eq $stm) { throw "whisper.cpp 包内未找到 whisper-cli.exe / whisper-stream.exe" }
+    Copy-Item $cli.FullName (Join-Path $WhisperDir "whisper-cli.exe") -Force
+    Copy-Item $stm.FullName (Join-Path $WhisperDir "whisper-stream.exe") -Force
+    Write-Host "  whisper-cli / whisper-stream 就位"
+  } catch {
+    Write-Host ("  whisper.cpp 安装失败（" + $_.Exception.Message + "），改用 Python 后端…")
+    $usePy = $true
+  }
 }
-Download-File $wUrl $WZip @(
-  ("https://ghfast.top/" + $wUrl),
-  ("https://mirror.ghproxy.com/" + $wUrl)
-)
-Expand-Archive -Path $WZip -DestinationPath (Join-Path $Tmp "whisper") -Force
-$cli = Get-ChildItem -Path (Join-Path $Tmp "whisper") -Recurse -Filter "whisper-cli.exe" | Select-Object -First 1
-$stm = Get-ChildItem -Path (Join-Path $Tmp "whisper") -Recurse -Filter "whisper-stream.exe" | Select-Object -First 1
-if ($null -eq $cli -or $null -eq $stm) { throw "whisper.cpp 包内未找到 whisper-cli.exe / whisper-stream.exe" }
-Copy-Item $cli.FullName (Join-Path $WhisperDir "whisper-cli.exe") -Force
-Copy-Item $stm.FullName (Join-Path $WhisperDir "whisper-stream.exe") -Force
-Write-Host "  whisper-cli / whisper-stream 就位"
+
+if ($usePy) {
+  Write-Host "== Python 后端 faster-whisper =="
+  $py = Get-Command python -ErrorAction SilentlyContinue
+  if ($null -eq $py) {
+    throw "未安装 Python。请到 https://www.python.org/downloads/ 安装（勾选 Add to PATH）后重新运行本脚本；或手动下载 whisper.cpp 二进制放入 tools\whisper\。"
+  }
+  $pyVenv = Join-Path $Root "tools\whisper-py"
+  if (-not (Test-Path (Join-Path $pyVenv "Scripts\python.exe"))) {
+    Write-Host "  创建虚拟环境…"
+    python -m venv $pyVenv
+  }
+  Write-Host "  安装 faster-whisper（清华 pip 镜像）…"
+  & (Join-Path $pyVenv "Scripts\python.exe") -m pip install --quiet faster-whisper -i https://pypi.tuna.tsinghua.edu.cn/simple
+  & (Join-Path $pyVenv "Scripts\python.exe") -m pip install --quiet sounddevice numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
+  Write-Host "  Python 后端就位（首次转写会自动经 hf-mirror 下载模型）"
+  Remove-Item $Tmp -Recurse -Force -ErrorAction SilentlyContinue
+  Write-Host ""
+  Write-Host "=== 安装完成（Python 后端）==="
+  Write-Host "验证：voice.cmd probe（应显示 mode=py）"
+  Write-Host "试转写：voice.cmd file 你的音频文件（首次会下载模型，稍慢）"
+  exit 0
+}
 
 # 2. 中文模型（默认 ggml-base.bin 约 140MB；想要更准可在 env 设 WHISPER_MODEL_SIZE=small）
 $Size = if ($env:WHISPER_MODEL_SIZE -eq "small") { "small" } else { "base" }

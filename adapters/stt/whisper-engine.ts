@@ -25,9 +25,13 @@ export interface WhisperEngineOptions {
   streamBin?: string;
   modelPath?: string;
   ffmpegBin?: string;
+  /** Python 后端（faster-whisper）解释器路径，默认 tools/whisper-py/Scripts/python.exe */
+  pythonExe?: string;
+  /** 强制后端："bin" / "py" / "auto"（默认 auto） */
+  mode?: "bin" | "py" | "auto";
   /** 识别语言，默认 zh */
   lang?: string;
-  /** 流模式线程数（默认 4） */
+  /** 流模式线程数（默认 4，仅 bin 后端） */
   threads?: number;
 }
 
@@ -42,24 +46,33 @@ export function resolveEnginePaths(opts?: WhisperEngineOptions): WhisperEngineOp
     streamBin: opts?.streamBin ?? process.env.WHISPER_STREAM_BIN ?? path.join(toolsDir(), "whisper", "whisper-stream.exe"),
     modelPath: opts?.modelPath ?? process.env.WHISPER_MODEL ?? path.join(toolsDir(), "whisper", "ggml-small.bin"),
     ffmpegBin: opts?.ffmpegBin ?? process.env.FFMPEG_BIN ?? path.join(toolsDir(), "ffmpeg", "ffmpeg.exe"),
+    pythonExe: opts?.pythonExe ?? process.env.WHISPER_PYTHON ?? path.join(toolsDir(), "whisper-py", "Scripts", "python.exe"),
+    mode: opts?.mode ?? (process.env.WHISPER_MODE as "bin" | "py" | "auto" | undefined) ?? "auto",
     lang: opts?.lang ?? process.env.WHISPER_LANG ?? "zh",
     threads: opts?.threads ?? (Number(process.env.WHISPER_THREADS) || 4),
   };
 }
 
-/** 引擎安装探测（导出供测试） */
+/** 引擎安装探测（导出供测试）；双后端：whisper.cpp 二进制 / faster-whisper Python */
 export function probeEngine(opts?: WhisperEngineOptions): EngineProbe {
   const p = resolveEnginePaths(opts);
   const whisper = p.whisperBin !== undefined && fs.existsSync(p.whisperBin);
   const stream = p.streamBin !== undefined && fs.existsSync(p.streamBin);
   const model = p.modelPath !== undefined && fs.existsSync(p.modelPath);
   const ffmpeg = p.ffmpegBin !== undefined && fs.existsSync(p.ffmpegBin);
+  const python = p.pythonExe !== undefined && fs.existsSync(p.pythonExe);
+  const sttPy = fs.existsSync(path.join(process.cwd(), "scripts", "whisper-stt.py"));
+  const binOk = whisper && stream && model && ffmpeg;
+  const pyOk = python && sttPy;
+  const mode: EngineProbe["mode"] = p.mode === "bin" ? (binOk ? "bin" : "none") : p.mode === "py" ? (pyOk ? "py" : "none") : binOk ? "bin" : pyOk ? "py" : "none";
   const hints: string[] = [];
-  if (!whisper) hints.push(WHISPER_DOWNLOAD_HINTS.whisper);
-  if (!stream) hints.push(WHISPER_DOWNLOAD_HINTS.whisper.replace("（含 whisper-cli 与 whisper-stream）", "（whisper-stream.exe）"));
-  if (!model) hints.push(WHISPER_DOWNLOAD_HINTS.model);
-  if (!ffmpeg) hints.push(WHISPER_DOWNLOAD_HINTS.ffmpeg);
-  return { ok: whisper && stream && model && ffmpeg, whisper, stream, model, ffmpeg, hints };
+  if (mode === "none") {
+    hints.push(WHISPER_DOWNLOAD_HINTS.whisper);
+    hints.push(WHISPER_DOWNLOAD_HINTS.model);
+    hints.push(WHISPER_DOWNLOAD_HINTS.ffmpeg);
+    hints.push("或改用 Python 后端：装 Python 后运行 setup-voice.cmd（会自动安装 faster-whisper，经清华 pip 镜像 + hf-mirror 模型镜像）");
+  }
+  return { ok: mode !== "none", mode, whisper, stream, model, ffmpeg, python, hints };
 }
 
 /** ffmpeg 转码参数（导出供测试） */
@@ -118,12 +131,22 @@ export function createWhisperCppEngine(opts?: WhisperEngineOptions): WhisperCppE
     probe: () => probeEngine(opts),
     async transcribeFile(source: VoiceSource): Promise<string> {
       const probe = probeEngine(opts);
-      if (!probe.whisper || !probe.model || !probe.ffmpeg) {
+      if (probe.mode === "none") {
         throw new Error(`语音转写引擎未安装：${probe.hints.join(" ")}`);
       }
       if (source.filePath === undefined || !fs.existsSync(source.filePath)) {
         throw new Error(`音频文件不存在：${source.filePath ?? "（未提供路径）"}`);
       }
+      // Python 后端：faster-whisper（模型首次使用时自动下载）
+      if (probe.mode === "py") {
+        const r = await runQuiet(
+          paths.pythonExe!,
+          [path.join(process.cwd(), "scripts", "whisper-stt.py"), "file", source.filePath],
+        );
+        if (r.code !== 0) throw new Error(`whisper-py 转写失败(code ${r.code}): ${r.out.slice(-400)}`);
+        return r.out.trim();
+      }
+      // bin 后端：ffmpeg → whisper-cli
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "genesis-stt-"));
       const wav = path.join(tmpDir, "audio.wav");
       const outPrefix = path.join(tmpDir, "out");
@@ -142,37 +165,55 @@ export function createWhisperCppEngine(opts?: WhisperEngineOptions): WhisperCppE
     },
     transcribeStream(source: VoiceSource, onUtterance: (u: Utterance) => void): StreamHandle | null {
       const probe = probeEngine(opts);
-      if (!probe.stream || !probe.model) {
+      if (probe.mode === "none") {
         // eslint-disable-next-line no-console
         console.warn("[stt] 流式引擎未安装：" + probe.hints.join(" "));
         return null;
       }
+      // Python 后端：faster-whisper + sounddevice 块式连续转写
+      if (probe.mode === "py") {
+        const child: ChildProcess = spawn(paths.pythonExe!, [
+          path.join(process.cwd(), "scripts", "whisper-stt.py"),
+          "stream",
+        ]);
+        return pipeStreamLines(child, source, onUtterance, "whisper-py");
+      }
+      // bin 后端：whisper-stream
       const child: ChildProcess = spawn(paths.streamBin!, buildWhisperStreamArgs(paths.modelPath!, paths.lang, paths.threads, source.deviceId));
-      let stopped = false;
-      child.stdout?.on("data", (d: Buffer) => {
-        for (const line of d.toString("utf8").split(/\r?\n/)) {
-          const text = parseStreamLine(line);
-          if (text !== null) onUtterance({ text, ts: Date.now(), sourceLabel: source.label });
-        }
-      });
-      child.on("error", (err) => {
-        if (!stopped) {
-          // eslint-disable-next-line no-console
-          console.error("[stt] whisper-stream 启动失败：" + (err as Error).message);
-        }
-      });
-      child.on("exit", (code) => {
-        if (!stopped) {
-          // eslint-disable-next-line no-console
-          console.log(`[stt] whisper-stream 退出（code ${code ?? "?"}）`);
-        }
-      });
-      return {
-        stop() {
-          stopped = true;
-          child.kill();
-        },
-      };
+      return pipeStreamLines(child, source, onUtterance, "whisper-stream");
+    },
+  };
+}
+
+function pipeStreamLines(
+  child: ChildProcess,
+  source: VoiceSource,
+  onUtterance: (u: Utterance) => void,
+  tag: string,
+): StreamHandle {
+  let stopped = false;
+  child.stdout?.on("data", (d: Buffer) => {
+    for (const line of d.toString("utf8").split(/\r?\n/)) {
+      const text = parseStreamLine(line);
+      if (text !== null) onUtterance({ text, ts: Date.now(), sourceLabel: source.label });
+    }
+  });
+  child.on("error", (err) => {
+    if (!stopped) {
+      // eslint-disable-next-line no-console
+      console.error(`[stt] ${tag} 启动失败：${(err as Error).message}`);
+    }
+  });
+  child.on("exit", (code) => {
+    if (!stopped) {
+      // eslint-disable-next-line no-console
+      console.log(`[stt] ${tag} 退出（code ${code ?? "?"}）`);
+    }
+  });
+  return {
+    stop() {
+      stopped = true;
+      child.kill();
     },
   };
 }

@@ -14,8 +14,10 @@ export interface StreamHandle {
 }
 
 export interface EngineProbe {
-  /** 全部组件就绪 */
+  /** 某后端就绪 */
   ok: boolean;
+  /** 当前生效后端：bin（whisper.cpp 二进制）/ py（faster-whisper Python）/ none */
+  mode: "bin" | "py" | "none";
   /** 文件转写（whisper-cli.exe）可用 */
   whisper: boolean;
   /** 流式转写（whisper-stream.exe）可用 */
@@ -24,6 +26,8 @@ export interface EngineProbe {
   model: boolean;
   /** ffmpeg 可用（文件转写转码用） */
   ffmpeg: boolean;
+  /** Python 后端解释器存在 */
+  python: boolean;
   /** 缺失组件的下载提示 */
   hints: string[];
 }

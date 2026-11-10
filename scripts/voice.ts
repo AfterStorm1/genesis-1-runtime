@@ -15,14 +15,18 @@ async function main(): Promise<void> {
   if (mode === "probe") {
     const p = engine.probe();
     // eslint-disable-next-line no-console
-    console.log(`[stt] whisper-cli: ${p.whisper ? "OK" : "缺"} | whisper-stream: ${p.stream ? "OK" : "缺"} | 模型: ${p.model ? "OK" : "缺"} | ffmpeg: ${p.ffmpeg ? "OK" : "缺"}`);
+    console.log(
+      `[stt] 后端: ${p.mode}（bin=whisper.cpp 二进制 / py=faster-whisper Python / none=未安装）` +
+        ` | whisper-cli: ${p.whisper ? "OK" : "缺"} | whisper-stream: ${p.stream ? "OK" : "缺"}` +
+        ` | 模型: ${p.model ? "OK" : "缺"} | ffmpeg: ${p.ffmpeg ? "OK" : "缺"} | python: ${p.python ? "OK" : "缺"}`,
+    );
     for (const h of p.hints) {
       // eslint-disable-next-line no-console
       console.log(`  - ${h}`);
     }
     if (p.ok) {
       // eslint-disable-next-line no-console
-      console.log("[stt] 引擎就绪：voice.cmd file <音频> 转写文件；voice.cmd listen <设备号> 持续识别");
+      console.log("[stt] 引擎就绪：voice.cmd file <音频> 转写文件；voice.cmd listen 持续识别");
     }
     return;
   }

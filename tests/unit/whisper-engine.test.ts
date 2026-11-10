@@ -44,23 +44,25 @@ describe("whisper engine (arg building + probe)", () => {
     expect(parseStreamLine("whisper_init: ok")).toBeNull();
   });
 
-  it("probeEngine：缺失时逐项 false 并给下载提示；文件齐备时 ok", () => {
+  it("probeEngine：缺失时逐项 false 并给下载提示；文件齐备时 bin 模式 ok", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "genesis-wp-"));
     const mk = (name: string): string => {
       const f = path.join(dir, name);
       fs.writeFileSync(f, "fake");
       return f;
     };
-    // 空目录 → 全缺
+    // 空目录 → 全缺（mode none）
     const miss = probeEngine({
       whisperBin: path.join(dir, "whisper-cli.exe"),
       streamBin: path.join(dir, "whisper-stream.exe"),
       modelPath: path.join(dir, "m.bin"),
       ffmpegBin: path.join(dir, "ffmpeg.exe"),
+      pythonExe: path.join(dir, "python.exe"),
     });
     expect(miss.ok).toBe(false);
+    expect(miss.mode).toBe("none");
     expect(miss.hints.length).toBeGreaterThanOrEqual(3);
-    // 补齐四个文件 → ok
+    // 补齐四个文件 → bin 模式 ok
     mk("whisper-cli.exe");
     mk("whisper-stream.exe");
     mk("m.bin");
@@ -70,8 +72,20 @@ describe("whisper engine (arg building + probe)", () => {
       streamBin: path.join(dir, "whisper-stream.exe"),
       modelPath: path.join(dir, "m.bin"),
       ffmpegBin: path.join(dir, "ffmpeg.exe"),
+      pythonExe: path.join(dir, "python.exe"),
     });
     expect(ready.ok).toBe(true);
+    expect(ready.mode).toBe("bin");
+    // 只有 Python 后端 → py 模式 ok
+    const pyOnly = probeEngine({
+      whisperBin: path.join(dir, "no-cli.exe"),
+      streamBin: path.join(dir, "no-stream.exe"),
+      modelPath: path.join(dir, "no.bin"),
+      ffmpegBin: path.join(dir, "no-ffmpeg.exe"),
+      pythonExe: path.join(dir, "whisper-cli.exe"), // 复用已创建的假文件当 python.exe
+    });
+    expect(pyOnly.mode).toBe("py");
+    expect(pyOnly.ok).toBe(true);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
