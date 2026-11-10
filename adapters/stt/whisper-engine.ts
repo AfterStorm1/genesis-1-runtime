@@ -123,6 +123,13 @@ export function buildRecordArgs(pythonExe: string, outPath: string, seconds: num
   };
 }
 
+/** 项目内临时目录（规避用户 Temp 目录的 ACL 权限问题） */
+export function runtimeTmpDir(): string {
+  const dir = path.join(process.cwd(), "data", "tmp");
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
 /** 用默认麦克风录音到 wav（/说 用；配合云端转写实现高质量语音输入） */
 export async function recordToFile(outPath: string, seconds = 8): Promise<void> {
   const paths = resolveEnginePaths();

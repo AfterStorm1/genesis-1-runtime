@@ -2,11 +2,10 @@
 // 职责：输入读取、命令分发（/记忆 /忘记 /情绪 /说 /quit）、情绪事件、长期记忆提炼、
 //       情绪驱动（每 60s tick → 自主开口）、终止状态处理。
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { COGNITION_CONTRACT_VERSION } from "../../core/contract/cognition";
-import { createWhisperCppEngine, recordToFile } from "../../adapters/stt/whisper-engine";
+import { createWhisperCppEngine, recordToFile, runtimeTmpDir } from "../../adapters/stt/whisper-engine";
 import { fileSource } from "../../adapters/stt/voice-source";
 import type { ChatRuntime } from "./chat-runtime";
 import { sendUserMessage } from "./chat-runtime";
@@ -129,7 +128,7 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       if (sttProbe.mode !== "none") {
         // eslint-disable-next-line no-console
         console.log(`（正在听…请说话，约 8 秒；后端 ${sttProbe.mode}）`);
-        const tmp = path.join(os.tmpdir(), `genesis-say-${Date.now()}.wav`);
+        const tmp = path.join(runtimeTmpDir(), `genesis-say-${Date.now()}.wav`);
         try {
           await recordToFile(tmp, 8);
           const heard = await sttEngine.transcribeFile(fileSource(tmp, "麦克风"));
