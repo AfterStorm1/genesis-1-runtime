@@ -3,9 +3,9 @@
 // 复用：createChatRuntime() 返回可编程的聊天运行时（供 Web UI / 其他宿主复用），
 //       runChatLoop() 是终端交互循环。
 // 环境变量：
-//   GENESIS_PERSONA   人格卡路径（默认 config/persona/kaguya.persona.json）
+//   GENESIS_PERSONA   人格卡路径（默认 config/persona/hui.persona.json，主角「蕙」）
 //   —— 本地模式（未设置 LLM_API_KEY 时，默认）——
-//   OLLAMA_MODEL      默认 qwen2.5:7b    OLLAMA_BASE_URL 默认 http://localhost:11434
+//   OLLAMA_MODEL      默认 qwen3:8b     OLLAMA_BASE_URL 默认 http://localhost:11434
 //   —— 在线模式（设置 LLM_API_KEY 后自动切换）——
 //   LLM_API_KEY       必填               LLM_BASE_URL 默认 https://api.deepseek.com
 //   LLM_MODEL         默认 deepseek-chat
@@ -13,7 +13,7 @@
 //   CHAT_SUMMARY_EVERY 每 N 个用户回合提炼一次长期记忆（默认 4；0 关闭）
 //   CHAT_MEMORY_MAX    长期记忆容量（默认 50）  CHAT_MEMORY_TTL_DAYS 遗忘天数（默认 30）
 //   CHAT_HISTORY_DIR   记忆文件目录（默认 data/chat-history）
-//   CHAT_WORLD_RULES   世界观/任务/对话偏向规则文件（.md/.txt 全文追加进 system 提示词）
+//   CHAT_WORLD_RULES   世界观/任务/对话偏向规则文件（默认 config/world/hui-rules.md）
 //   CHAT_EXTRA_SYSTEM  直接追加一行/一段 system 规则（与 CHAT_WORLD_RULES 合并）
 //   CHAT_TEMPERATURE   采样温度（默认 0.7；低=稳重，高=跳脱）
 import fs from "node:fs";
@@ -31,6 +31,8 @@ import type { LongTermMemory } from "./adapters/llm/long-term-memory";
 import { createChatMemory } from "./adapters/llm/chat-memory";
 import { createSummarizer } from "./adapters/llm/summarizer";
 import type { Summarizer } from "./adapters/llm/summarizer";
+import { createTerminationHook } from "./adapters/safety-guard/termination-hook";
+import type { TerminationHook } from "./adapters/safety-guard/termination-hook";
 import { createMockSpeechRenderer } from "./adapters/renderers/mock-speech-renderer";
 import { createTextRenderer } from "./adapters/renderers/text-renderer";
 import type { PersonaCardV3 } from "./core/contract/persona";
@@ -44,6 +46,8 @@ export interface ChatRuntime {
   longTerm: LongTermMemory;
   /** 摘要器（把轮次提炼成长记忆） */
   summarizer: Summarizer;
+  /** 终止互动钩子（最高优先级安全规则） */
+  guard: TerminationHook;
   model: string;
   baseUrl: string;
   online: boolean;
@@ -66,7 +70,7 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     opts?.personaPath ??
     (process.env.GENESIS_PERSONA !== undefined
       ? path.resolve(process.env.GENESIS_PERSONA)
-      : path.join(process.cwd(), "config", "persona", "kaguya.persona.json"));
+      : path.join(process.cwd(), "config", "persona", "hui.persona.json")); // 默认人格：蕙
   const persona = loadPersona(personaPath);
 
   const apiKey = opts?.apiKey ?? process.env.LLM_API_KEY;
@@ -94,9 +98,12 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
   const memory = createChatMemory({ turns: history, longTerm });
   const summarizer = createSummarizer({ baseUrl, model, apiKey });
 
-  // 世界观/规则注入：CHAT_WORLD_RULES（文件）+ CHAT_EXTRA_SYSTEM（文本）合并进 system 提示词
+  // 世界观/规则注入：CHAT_WORLD_RULES（文件）+ CHAT_EXTRA_SYSTEM（文本）合并进 system 提示词；
+  // 未显式设置时默认加载主角「蕙」的规则文件。
   const worldRulesFile =
-    process.env.CHAT_WORLD_RULES !== undefined ? path.resolve(process.env.CHAT_WORLD_RULES) : undefined;
+    process.env.CHAT_WORLD_RULES !== undefined
+      ? path.resolve(process.env.CHAT_WORLD_RULES)
+      : path.join(process.cwd(), "config", "world", "hui-rules.md");
   let worldRules: string | undefined;
   if (worldRulesFile !== undefined) {
     if (fs.existsSync(worldRulesFile)) {
@@ -115,6 +122,9 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
       .join("\n\n") || undefined;
   const temperature = Number(process.env.CHAT_TEMPERATURE);
 
+  // 最高优先级安全钩子：越界输入 → 永久终止互动
+  const guard = createTerminationHook();
+
   const rt = await compose({
     runtimeId: "rt:chat",
     personaId: "persona:chat",
@@ -130,19 +140,36 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
       temperature: Number.isFinite(temperature) ? temperature : undefined,
     }),
     memory, // 对话记忆走契约预留的 MemoryStore → recall 路径
+    hooks: [guard], // 终止互动钩子（beforeCognition 强制判定）
     batchTimeoutMs: 120_000, // 本地 LLM（CPU 推理）延迟远高于默认 2s 批次超时
   });
 
-  return { rt, persona, history, longTerm, summarizer, model, baseUrl, online, historyFile, longTermFile };
+  return {
+    rt,
+    persona,
+    history,
+    longTerm,
+    summarizer,
+    guard,
+    model,
+    baseUrl,
+    online,
+    historyFile,
+    longTermFile,
+  };
 }
 
-/** 发送一条用户消息；返回角色回复（无台词返回 null）。同时维护对话记忆。 */
+/** 发送一条用户消息；返回角色回复（无台词返回 null）。同时维护对话记忆。
+ *  终止状态下（guard.terminated）不注入、不保存历史，只返回“连接中断...”。 */
 export function sendUserMessage(
   chat: ChatRuntime,
   text: string,
   timeoutMs = 120_000,
 ): Promise<{ text: string | null; emotion: string }> {
-  const { rt, history } = chat;
+  const { rt, history, guard } = chat;
+  if (guard.terminated) {
+    return Promise.resolve({ text: "连接中断...", emotion: "neutral" });
+  }
   history.saveTurn("user", text);
   return new Promise((resolve) => {
     let settled = false;
@@ -194,6 +221,13 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
     const trimmed = line.trim();
     if (trimmed === "/quit" || trimmed === "/exit") break;
     if (trimmed === "") continue;
+
+    // —— 终止状态：不再回应任何输入（/quit 仍有效）——
+    if (chat.guard.terminated) {
+      // eslint-disable-next-line no-console
+      console.log("连接中断...");
+      continue;
+    }
 
     // —— 显式遗忘命令（遗忘机制入口 3）——
     if (trimmed.startsWith("/忘记 ")) {
