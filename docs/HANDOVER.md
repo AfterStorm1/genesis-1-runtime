@@ -1,26 +1,26 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-10T20:00:29.963Z（北京时间 2026/11/11 04:00:29）
+> 自动生成时间：2026-11-11T02:02:33.251Z（北京时间 2026/11/11 10:02:33）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
 ## 自动快照
 
 - Node 版本：v24.22.1
-- 代码规模：core 54 个文件 / adapters 28 / tests 43 / 全仓约 214 个文件（不含 node_modules）
-- 测试用例：约 233 个（unit + e2e，含 A01a–A17 对应断言）
+- 代码规模：core 54 个文件 / adapters 30 / tests 44 / 全仓约 217 个文件（不含 node_modules）
+- 测试用例：约 242 个（unit + e2e，含 A01a–A17 对应断言）
 - 证据产物：18/18；CI 状态：CI 全绿
 
 ### 最近提交（git log -8）
 
-`db1a1fa feat: QQ OneBot access-token support (QQ_ONE_BOT_TOKEN via ws query + HTTP bearer); fix ASCII-only qq-chat.cmd trigger`
-`50e3c24 feat: QQ group voice messages — auto-transcribe [CQ:record] via engine (cloud-first) and reply in character`
-`8c07059 fix: voice recording writes to project data/tmp (user Temp ACL broken on this machine)`
-`77a9c5d feat: /shuo now records mic and transcribes via engine (cloud-first) instead of Windows SAPI; SAPI stays as fallback`
-`feb6bab fix: reword repeated-question rule to prevent rule-text leakage into dialogue`
-`508bb6c feat: cloud STT backend (OpenAI-compatible /audio/transcriptions, SiliconFlow default; auto-priority cloud>bin>py)`
-`a27d417 feat: initial_prompt vocabulary bias for persona terms in STT (fix homophone errors like 会->蕙)`
-`061ab40 fix: av.open compat shim in stt.py (PyAV 19 removed metadata_errors; drop version pin)`
+`034ca8c fix: de-terse Hui — 15-40 char range with 2-3 sentence allowance, medium-length few-shots, segmenter 40 cap`
+`0839a8d content: drop 这位 as form of address (impolite); address rules simplified`
+`f539869 content: friend aliases recorded (水滴=苔绿tars/绿, 鸟=诺)`
+`49f15bc feat: two named friends — 水滴(3323546045) and 鸟(171581863) via QQ_FRIEND_NAMES; per-person note`
+`6e8bf5a docs: QQ_FRIEND_IDS example line`
+`354867f feat: QQ friend list — QQ_FRIEND_IDS recognized with note (no admin powers); nicknames in rules`
+`9b6363a rename: role term now 管理员 (admin) in rules/notes/logs`
+`a00a493 refine: neutral naming — owner role now 亲近的人 (close/trusted person) in rules, notes and logs`
 
 ### 本地 Ollama 模型
 
