@@ -1,7 +1,7 @@
 # 世界观 / 任务 / 对话偏向 规则文件示例
 
 把本文件复制改名为我的世界观.md，然后在启动前设置：
-  set CHAT_WORLD_RULES=config\world\rules.md
+  set CHAT_WORLD_RULES=config\world\hui-rules.md
 内容会整段追加进 system 提示词。写法建议：事实罗列 + 禁令 + 风格指令，短句为主。
 
 ---

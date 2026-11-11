@@ -64,7 +64,7 @@ rem set "OLLAMA_MODEL=qwen3:8b"
 rem set "OLLAMA_BASE_URL=http://localhost:11434"
 rem 固定人格与规则（可选）
 rem set "GENESIS_PERSONA=config\persona\kaguya.persona.json"
-rem set "CHAT_WORLD_RULES=config\world\rules.md"
+rem set "CHAT_WORLD_RULES=config\world\hui-rules.md"
 ```
 
 - key 为空 → 自动用本地 Ollama（`ollama pull <模型名>` 增装新模型）；
