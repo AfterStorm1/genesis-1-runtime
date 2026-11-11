@@ -496,6 +496,12 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         /* 保持原样 */
       }
     }
+    if (imgUrl !== null && imgLocal === undefined && Array.isArray(ev.message)) {
+      const seg = ev.message.find((m) => m.type === "image");
+      // 排查用：看看 NapCat 给图片事件带了哪些字段
+      // eslint-disable-next-line no-console
+      console.log(`[qq-bot] 图片事件无本地路径，字段：${JSON.stringify(seg?.data ?? {})}`.slice(0, 400));
+    }
 
     let text = quotedMe
       ? stripCqCodes(ev.raw_message ?? "").trim()
