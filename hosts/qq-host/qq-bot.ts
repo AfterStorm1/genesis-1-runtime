@@ -24,6 +24,8 @@ export interface QqBotConfig {
   ownerIds: Set<string>;
   /** 好朋友 QQ 号集合（QQ_FRIEND_IDS 逗号分隔；消息带好朋友注记，无管理权限） */
   friendIds: Set<string>;
+  /** 好朋友昵称映射（QQ_FRIEND_NAMES，格式 qq:名字,qq:名字） */
+  friendNames: Map<string, string>;
   /** 触发词（无 @ 时以此开头触发），默认“蕙” */
   trigger: string;
   /** 每群冷却（毫秒），默认 3000 */
@@ -41,6 +43,17 @@ function csvSet(v: string | undefined): Set<string> {
   );
 }
 
+function nameMap(v: string | undefined): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const part of (v ?? "").split(",")) {
+    const [qq, name] = part.split(":");
+    if (qq !== undefined && name !== undefined && qq.trim() !== "" && name.trim() !== "") {
+      m.set(qq.trim(), name.trim());
+    }
+  }
+  return m;
+}
+
 export function readQqEnv(): QqBotConfig {
   const token = process.env.QQ_ONE_BOT_TOKEN;
   return {
@@ -49,6 +62,7 @@ export function readQqEnv(): QqBotConfig {
     token: token !== undefined && token !== "" ? token : undefined,
     ownerIds: csvSet(process.env.QQ_OWNER_IDS),
     friendIds: csvSet(process.env.QQ_FRIEND_IDS),
+    friendNames: nameMap(process.env.QQ_FRIEND_NAMES),
     trigger: process.env.QQ_TRIGGER ?? "蕙",
     cooldownMs: Number(process.env.QQ_COOLDOWN_MS ?? 3000) || 3000,
     maxReplyLen: Number(process.env.QQ_MAX_REPLY_LEN ?? 500) || 500,
@@ -445,10 +459,11 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
       // 身份由宿主判定注入：管理员/好朋友的消息带系统注记（群员无法伪造）
       const isFriend = config.friendIds.has(senderId);
+      const friendName = config.friendNames.get(senderId);
       const inputText = isOwner
         ? `[系统注记：这是管理员的消息]\n${text}`
         : isFriend
-          ? `[系统注记：这是你的好朋友的消息]\n${text}`
+          ? `[系统注记：这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息]\n${text}`
           : text;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
