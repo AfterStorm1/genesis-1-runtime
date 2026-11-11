@@ -9,9 +9,12 @@ import type { ChatRuntime } from "../chat-host/chat-runtime";
 import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
 import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whisper-engine";
 import { fileSource } from "../../adapters/stt/voice-source";
+import { createImageDescriber } from "../../adapters/llm/image-vision";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
+/** 图片识别（视觉模型，key 复用 SiliconFlow） */
+const imageDescriber = createImageDescriber();
 
 export interface QqBotConfig {
   /** OneBot 正向 WebSocket 地址（NapCat 配置），默认 ws://127.0.0.1:3001 */
@@ -107,6 +110,18 @@ export function isGroupMessage(ev: unknown): ev is OneBotGroupEvent {
 /** 清洗 CQ 码（表情/图片/at 等）为纯文本（导出供测试） */
 export function stripCqCodes(text: string): string {
   return text.replace(/\[CQ:[^\]]*\]/g, "").trim();
+}
+
+/** 从 CQ 码提取引用消息 id（导出供测试）；如 [CQ:reply,id=12345] */
+export function extractCqReply(raw: string): string | null {
+  const m = raw.match(/\[CQ:reply,id=([^\],\s]+)/);
+  return m !== null && m[1] !== undefined ? m[1].trim() : null;
+}
+
+/** 从 CQ 码提取图片 url（导出供测试）；如 [CQ:image,file=xx,url=http://...] */
+export function extractCqImageUrl(raw: string): string | null {
+  const m = raw.match(/\[CQ:image,[^\]]*url=([^\],\s]+)/);
+  return m !== null && m[1] !== undefined ? m[1].trim() : null;
 }
 
 /** 从 CQ 码提取指定类型的 file 路径（导出供测试）；如语音 [CQ:record,file=xxx] */
@@ -246,6 +261,16 @@ async function httpPost(
   params: Record<string, unknown>,
   token?: string,
 ): Promise<void> {
+  await httpApi(httpBase, action, params, token);
+}
+
+/** OneBot HTTP API 调用并返回 JSON（get_msg 等需要返回值） */
+async function httpApi(
+  httpBase: string,
+  action: string,
+  params: Record<string, unknown>,
+  token?: string,
+): Promise<{ data?: Record<string, unknown> }> {
   const res = await fetch(`${httpBase}${action}`, {
     method: "POST",
     headers: {
@@ -258,6 +283,7 @@ async function httpPost(
     const body = await res.text().catch(() => "");
     throw new Error(`onebot_http_${res.status}: ${body.slice(0, 200)}`);
   }
+  return (await res.json()) as { data?: Record<string, unknown> };
 }
 
 /** 管理指令执行（导出供测试）：reset/clear = 重建本群运行时 + 清记忆；status = 回报状态 */
@@ -427,17 +453,32 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       return;
     }
 
-    const text = extractUserText(ev, ev.self_id, config.trigger);
-    if (text === null) {
-      // 可见日志：文本消息未触发（不是 @ 也没触发词开头）
-      if (!/\[CQ:(image|face|at)/.test(ev.raw_message ?? "")) {
+    const senderId = String(ev.user_id ?? "");
+    const isOwner = config.ownerIds.has(senderId);
+
+    // —— 引用触发：有人引用她说的话 → 自动回复（无需 @/触发词）——
+    let quotedMe = false;
+    const replyId = extractCqReply(ev.raw_message ?? "");
+    if (replyId !== null) {
+      try {
+        const msg = await httpApi(config.httpBase, "/get_msg", { message_id: Number(replyId) }, config.token);
+        const sender = (msg.data as { sender?: { user_id?: number | string } } | undefined)?.sender;
+        quotedMe = sender !== undefined && String(sender.user_id) === String(ev.self_id);
+      } catch {
+        quotedMe = false; // 查不到引用目标则不按引用触发
+      }
+    }
+
+    let text = quotedMe
+      ? stripCqCodes(ev.raw_message ?? "").trim()
+      : extractUserText(ev, ev.self_id, config.trigger);
+    if (text === "" || text === null) {
+      if (!quotedMe && !/\[CQ:(image|face|at)/.test(ev.raw_message ?? "")) {
         // eslint-disable-next-line no-console
         console.log(`[qq-bot] 未触发 群${groupId}：需要 @机器人 或以“${config.trigger}”开头`);
       }
       return;
     }
-    const senderId = String(ev.user_id ?? "");
-    const isOwner = config.ownerIds.has(senderId);
 
     // —— 管理指令（仅管理员；群员发 ! 开头直接忽略）——
     if (isOwner) {
@@ -464,6 +505,17 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         logTerminated(groupId);
         return; // 终止状态：该群不再回应（boss可用 !reset 重置）
       }
+      // 图片识别：消息里带了图 → 视觉模型描述后附进上下文
+      let effectiveText = text;
+      const imgUrl = extractCqImageUrl(ev.raw_message ?? "");
+      if (imgUrl !== null) {
+        const desc = await imageDescriber.describeImage(imgUrl);
+        if (desc !== null) {
+          // eslint-disable-next-line no-console
+          console.log(`[qq-bot] 群 ${groupId} 图片识别：${desc.slice(0, 40)}`);
+          effectiveText = `${effectiveText}\n（对方还发了一张图：${desc}）`;
+        }
+      }
       // 身份由宿主判定注入：管理员/好朋友的消息带系统注记（群员无法伪造）
       const isFriend = config.friendIds.has(senderId);
       const friendName = config.friendNames.get(senderId);
@@ -478,10 +530,12 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         }
       }
       const inputText = isOwner
-        ? `[系统注记：这是boss的消息]\n${text}`
+        ? `[系统注记：这是boss的消息]\n${effectiveText}`
         : isFriend
-          ? `[系统注记：这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}]\n${text}`
-          : text;
+          ? `[系统注记：这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}]\n${effectiveText}`
+          : quotedMe
+            ? `[系统注记：有人引用了你说过的话，回应一下]\n${effectiveText}`
+            : effectiveText;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
       const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行

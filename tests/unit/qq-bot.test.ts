@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import {
   downloadRecord,
   extractCqFile,
+  extractCqImageUrl,
   extractCqRecord,
+  extractCqReply,
   extractUserText,
   isGroupMessage,
   parseOwnerCommand,
@@ -152,7 +154,16 @@ describe("qq bot (onebot 11 parsing)", () => {
     expect(shouldGreetFriend("2026/11/11", "2026/11/11")).toBe(false);
   });
 
+  it("extractCqReply / extractCqImageUrl：引用 id 与图片 url 提取", () => {
+    expect(extractCqReply("[CQ:reply,id=12345] 哈哈")).toBe("12345");
+    expect(extractCqReply("纯文本")).toBeNull();
+    expect(extractCqImageUrl("[CQ:image,file=xx.png,url=https://cdn.qq.com/a.png]")).toBe(
+      "https://cdn.qq.com/a.png",
+    );
+    expect(extractCqImageUrl("[CQ:image,file=xx.png]")).toBeNull();
+  });
+
   it("写入 qq-bot 证据产物", () => {
-    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve/retry/download; owner commands; daily friend greet; chunking"], true);
+    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve/retry/download; owner commands; daily friend greet; quote/image extract; chunking"], true);
   });
 });
