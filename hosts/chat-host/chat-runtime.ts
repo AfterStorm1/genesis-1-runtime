@@ -2,6 +2,7 @@
 // 职责：读环境配置 → 组装三级记忆 + LLM 认知 + 渲染器 + 安全钩子 → compose → 可编程聊天运行时。
 // 复用：Web UI / 其他宿主 import { createChatRuntime, sendUserMessage } 即可。
 import fs from "node:fs";
+import path from "node:path";
 import { compose } from "../../composition/composition-root";
 import type { RuntimeBundle } from "../../core/runtime";
 import { loadPersona } from "../../layers/l1-persona/persona-loader";
