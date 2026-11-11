@@ -13,5 +13,5 @@ rem ---- optional: cloud STT (voice transcription via SiliconFlow, OpenAI-compat
 rem set "STT_CLOUD_KEY=sk-paste-siliconflow-key"
 rem set "STT_CLOUD_BASE_URL=https://api.siliconflow.cn/v1"
 rem set "STT_CLOUD_MODEL=FunAudioLLM/SenseVoiceSmall"
-rem ---- optional: QQ group bot owner (comma-separated QQ numbers; owner can !reset/!clear/!status) ----
-rem set "QQ_OWNER_IDS=??QQ?"
+rem ---- optional: QQ group bot trusted person (comma-separated QQ numbers; can use !reset/!clear/!status) ----
+rem set "QQ_OWNER_IDS=your-qq-number"

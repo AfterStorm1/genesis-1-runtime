@@ -20,7 +20,7 @@ export interface QqBotConfig {
   httpBase: string;
   /** 访问令牌（NapCat 网络配置里设置了令牌时必填；也可在 WebUI 里留空） */
   token?: string;
-  /** 主人 QQ 号集合（QQ_OWNER_IDS 逗号分隔；只有主人可发 ! 管理指令且消息带优先注记） */
+  /** 亲近的人 QQ 号集合（QQ_OWNER_IDS 逗号分隔；仅这些人可发 ! 管理指令，消息带身份注记） */
   ownerIds: Set<string>;
   /** 触发词（无 @ 时以此开头触发），默认“蕙” */
   trigger: string;
@@ -50,7 +50,7 @@ export function readQqEnv(): QqBotConfig {
 
 export type OwnerCommand = "reset" | "clear" | "status";
 
-/** 主人管理指令解析（导出供测试）：!reset 重置本群 / !clear 清记忆 / !status 查状态 */
+/** 管理指令解析（导出供测试）：!reset 重置本群 / !clear 清记忆 / !status 查状态 */
 export function parseOwnerCommand(text: string): OwnerCommand | null {
   const t = text.trim().toLowerCase();
   if (t === "!reset") return "reset";
@@ -234,7 +234,7 @@ async function httpPost(
   }
 }
 
-/** 主人指令执行（导出供测试）：reset/clear = 重建本群运行时 + 清记忆；status = 回报状态 */
+/** 管理指令执行（导出供测试）：reset/clear = 重建本群运行时 + 清记忆；status = 回报状态 */
 export async function handleOwnerCommand(
   cmd: OwnerCommand,
   groupId: string,
@@ -264,7 +264,7 @@ export async function handleOwnerCommand(
       ctx.config.token,
     );
     // eslint-disable-next-line no-console
-    console.log(`[qq-bot] 主人已重置群 ${groupId}`);
+    console.log(`[qq-bot] 亲近的人已重置群 ${groupId}`);
     return;
   }
   if (cmd === "status") {
@@ -411,7 +411,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     const senderId = String(ev.user_id ?? "");
     const isOwner = config.ownerIds.has(senderId);
 
-    // —— 主人管理指令（仅 owner；群员发 ! 开头直接忽略）——
+    // —— 管理指令（仅亲近的人；群员发 ! 开头直接忽略）——
     if (isOwner) {
       const cmd = parseOwnerCommand(text);
       if (cmd !== null) {
@@ -422,7 +422,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
     } else if (text.trim().startsWith("!")) {
       // eslint-disable-next-line no-console
-      console.log(`[qq-bot] 群 ${groupId} 非主人尝试指令，忽略`);
+      console.log(`[qq-bot] 群 ${groupId} 非亲近成员尝试指令，忽略`);
       return;
     }
 
@@ -434,10 +434,10 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const chat = await runtimeFor(groupId);
       if (chat.guard.terminated) {
         logTerminated(groupId);
-        return; // 终止状态：该群不再回应（主人可用 !reset 重置）
+        return; // 终止状态：该群不再回应（亲近的人可用 !reset 重置）
       }
-      // 身份由宿主判定注入：主人消息带系统注记（群员无法伪造）
-      const inputText = isOwner ? `[系统注记：这是主人的消息，优先听从]\n${text}` : text;
+      // 身份由宿主判定注入：亲近的人的消息带系统注记（群员无法伪造）
+      const inputText = isOwner ? `[系统注记：这是那个与你亲近的人的消息]\n${text}` : text;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
       const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
