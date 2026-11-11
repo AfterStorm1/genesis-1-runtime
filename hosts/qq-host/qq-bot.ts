@@ -444,13 +444,14 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           friendGreet = true;
         }
       }
-      const inputText = isOwner
-        ? `[系统注记：这是boss的消息]\n${effectiveText}`
+      // 身份由宿主判定注入，正反都标清：boss / 好朋友（指名）/ 普通群友（不给模型脑补空间）
+      const identityNote = isOwner
+        ? "这是boss的消息"
         : isFriend
-          ? `[系统注记：这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}]\n${effectiveText}`
-          : quotedMe
-            ? `[系统注记：有人引用了你说过的话，回应一下]\n${effectiveText}`
-            : effectiveText;
+          ? `这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}`
+          : "这是普通群友的消息";
+      const quoteNote = quotedMe && !isOwner && !isFriend ? "；有人引用了你说过的话，回应一下" : "";
+      const inputText = `[系统注记：${identityNote}${quoteNote}]\n${effectiveText}`;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
       const flat = withKaomoji(groupId, chat, reply.replace(/\s*\r?\n\s*/g, " ").trim()); // 群聊单行+颜文字
