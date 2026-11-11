@@ -20,7 +20,7 @@ export interface QqBotConfig {
   httpBase: string;
   /** 访问令牌（NapCat 网络配置里设置了令牌时必填；也可在 WebUI 里留空） */
   token?: string;
-  /** 管理员 QQ 号集合（QQ_OWNER_IDS 逗号分隔；仅管理员可发 ! 管理指令，消息带管理员注记） */
+  /** boss QQ 号集合（QQ_OWNER_IDS 逗号分隔；仅boss可发 ! 管理指令，消息带管理员注记） */
   ownerIds: Set<string>;
   /** 好朋友 QQ 号集合（QQ_FRIEND_IDS 逗号分隔；消息带好朋友注记，无管理权限） */
   friendIds: Set<string>;
@@ -290,7 +290,7 @@ export async function handleOwnerCommand(
       ctx.config.token,
     );
     // eslint-disable-next-line no-console
-    console.log(`[qq-bot] 管理员已重置群 ${groupId}`);
+    console.log(`[qq-bot] boss已重置群 ${groupId}`);
     return;
   }
   if (cmd === "status") {
@@ -450,7 +450,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
     } else if (text.trim().startsWith("!")) {
       // eslint-disable-next-line no-console
-      console.log(`[qq-bot] 群 ${groupId} 非管理员尝试指令，忽略`);
+      console.log(`[qq-bot] 群 ${groupId} 非boss成员尝试指令，忽略`);
       return;
     }
 
@@ -462,7 +462,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const chat = await runtimeFor(groupId);
       if (chat.guard.terminated) {
         logTerminated(groupId);
-        return; // 终止状态：该群不再回应（管理员可用 !reset 重置）
+        return; // 终止状态：该群不再回应（boss可用 !reset 重置）
       }
       // 身份由宿主判定注入：管理员/好朋友的消息带系统注记（群员无法伪造）
       const isFriend = config.friendIds.has(senderId);
@@ -478,7 +478,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         }
       }
       const inputText = isOwner
-        ? `[系统注记：这是管理员的消息]\n${text}`
+        ? `[系统注记：这是boss的消息]\n${text}`
         : isFriend
           ? `[系统注记：这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}]\n${text}`
           : text;

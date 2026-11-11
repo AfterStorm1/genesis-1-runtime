@@ -13,7 +13,7 @@ rem ---- optional: cloud STT (voice transcription via SiliconFlow, OpenAI-compat
 rem set "STT_CLOUD_KEY=sk-paste-siliconflow-key"
 rem set "STT_CLOUD_BASE_URL=https://api.siliconflow.cn/v1"
 rem set "STT_CLOUD_MODEL=FunAudioLLM/SenseVoiceSmall"
-rem ---- optional: QQ group bot admin (comma-separated QQ numbers; can use !reset/!clear/!status) ----
+rem ---- optional: QQ group bot boss (comma-separated QQ numbers; can use !reset/!clear/!status) ----
 rem set "QQ_OWNER_IDS=your-qq-number"
-rem ---- optional: QQ group bot close friends (recognized, no admin commands) ----
+rem ---- optional: QQ group bot close friends (recognized, no boss commands) ----
 rem set "QQ_FRIEND_IDS=friend-qq-number"
