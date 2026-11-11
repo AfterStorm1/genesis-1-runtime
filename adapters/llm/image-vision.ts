@@ -27,7 +27,14 @@ export function createImageDescriber(): ImageDescription {
 
   /** QQ CDN 链接带时效签名、第三方平台拉不到：先下载到本地再转 base64 直传 */
   async function toDataUri(url: string): Promise<string> {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        // QQ 资源服务器要求浏览器特征，否则 400
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        Referer: "https://qq.com/",
+      },
+    });
     if (!res.ok) throw new Error(`image_download_http_${res.status}`);
     const buf = Buffer.from(await res.arrayBuffer());
     const mime = url.includes(".png") ? "image/png" : url.includes(".gif") ? "image/gif" : "image/jpeg";
