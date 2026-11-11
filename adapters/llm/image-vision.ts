@@ -20,10 +20,19 @@ export function resolveVisionConfig(): VisionConfig {
   const stt = resolveCloudConfig(); // 复用 SiliconFlow 配置（key/baseUrl）
   return {
     baseUrl: (process.env.VISION_BASE_URL ?? stt.baseUrl).replace(/\/+$/, ""),
-    model: process.env.VISION_MODEL ?? "Qwen/Qwen2.5-VL-7B-Instruct",
+    model: process.env.VISION_MODEL ?? "",
     key: process.env.VISION_KEY ?? stt.key,
   };
 }
+
+/** 候选视觉模型（平台模型名会随版本调整：按序尝试，首个可用即用） */
+export const DEFAULT_VISION_MODELS: readonly string[] = [
+  "Qwen/Qwen3-VL-32B-Instruct",
+  "Qwen/Qwen2.5-VL-72B-Instruct",
+  "Qwen/Qwen2.5-VL-32B-Instruct",
+  "Qwen/Qwen2-VL-7B-Instruct",
+  "deepseek-ai/deepseek-vl2",
+];
 
 export interface ImageDescription {
   /** 描述图片；识别失败返回 null */
@@ -69,35 +78,46 @@ export function createImageDescriber(): ImageDescription {
       }
       try {
         const dataUri = await toDataUri(input);
-        const res = await fetch(`${config.baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${config.key}`,
-          },
-          body: JSON.stringify({
-            model: config.model,
-            messages: [
-              {
-                role: "user",
-                content: [
-                  { type: "text", text: "用两三句话描述这张图，注意主体、动作、表情和图中文字（如有）。" },
-                  { type: "image_url", image_url: { url: dataUri } },
-                ],
-              },
-            ],
-            max_tokens: 200,
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.text().catch(() => "");
-          // eslint-disable-next-line no-console
-          console.warn(`[vision] 识别失败 http_${res.status}: ${body.slice(0, 200)}`);
+        // 多模型按序尝试：平台模型名会调整，首个可用的即用
+        const models = config.model !== "" ? [config.model] : [...DEFAULT_VISION_MODELS];
+        let lastError = "";
+        for (const model of models) {
+          const res = await fetch(`${config.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${config.key}`,
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    { type: "text", text: "用两三句话描述这张图，注意主体、动作、表情和图中文字（如有）。" },
+                    { type: "image_url", image_url: { url: dataUri } },
+                  ],
+                },
+              ],
+              max_tokens: 200,
+            }),
+          });
+          if (!res.ok) {
+            lastError = await res.text().catch(() => "");
+            // eslint-disable-next-line no-console
+            console.warn(`[vision] 模型 ${model} 失败 http_${res.status}: ${lastError.slice(0, 120)}`);
+            continue; // 换下一个候选模型
+          }
+          const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+          const text = data.choices?.[0]?.message?.content?.trim();
+          if (text !== undefined && text !== "") {
+            return text;
+          }
           return null;
         }
-        const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-        const text = data.choices?.[0]?.message?.content?.trim();
-        return text !== undefined && text !== "" ? text : null;
+        // eslint-disable-next-line no-console
+        console.warn(`[vision] 全部候选模型均失败：${lastError.slice(0, 200)}`);
+        return null;
       } catch (err) {
         // eslint-disable-next-line no-console
         console.warn(`[vision] 识别异常：${err instanceof Error ? err.message : String(err)}`);
