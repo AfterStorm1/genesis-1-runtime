@@ -35,6 +35,8 @@ export interface QqBotConfig {
   cooldownMs: number;
   /** 触发后等图窗口（毫秒）：触发聊天后的下一张图才识别，默认 60_000 */
   imageWindowMs: number;
+  /** 颜文字发射配置（心情好时句尾跟一个，宿主控制节奏） */
+  kaomoji: KaomojiConfig;
   /** 单条回复最大长度（超出分条发送），默认 500 */
   maxReplyLen: number;
 }
@@ -71,6 +73,11 @@ export function readQqEnv(): QqBotConfig {
     trigger: process.env.QQ_TRIGGER ?? "蕙",
     cooldownMs: Number(process.env.QQ_COOLDOWN_MS ?? 3000) || 3000,
     imageWindowMs: Number(process.env.QQ_IMAGE_WINDOW_MS ?? 60_000) || 60_000,
+    kaomoji: {
+      enabled: (process.env.QQ_KAOMOJI ?? "1") !== "0",
+      minIntensity: Number(process.env.QQ_KAOMOJI_MIN ?? 0.55) || 0.55,
+      cooldownMs: Number(process.env.QQ_KAOMOJI_COOLDOWN_MS ?? 300_000) || 300_000,
+    },
     maxReplyLen: Number(process.env.QQ_MAX_REPLY_LEN ?? 500) || 500,
   };
 }
@@ -89,6 +96,8 @@ import {
   stripCqCodes,
 } from "./qq-messages";
 import type { OneBotGroupEvent, OwnerCommand } from "./qq-messages";
+import { pickKaomoji } from "./kaomoji";
+import type { KaomojiConfig } from "./kaomoji";
 // 向后兼容：原导出路径（tests 等引用方不动）
 export * from "./qq-messages";
 async function httpPost(
@@ -189,6 +198,16 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
   const friendGreetings = new Map<string, string>();
   /** 触发聊天后的等图窗口：群号 → 截止时间戳（之后的下一张图才识别） */
   const awaitingImage = new Map<string, number>();
+  /** 颜文字冷却：群号 → 上次发射时间 */
+  const kaomojiLast = new Map<string, number>();
+
+  /** 心情好时按冷却在句尾跟一个颜文字（宿主控制节奏，不滥用） */
+  const withKaomoji = (groupId: string, chat: ChatRuntime, textReply: string): string => {
+    const k = pickKaomoji(chat.emotion?.state(), kaomojiLast.get(groupId) ?? 0, Date.now(), config.kaomoji);
+    if (k === null) return textReply;
+    kaomojiLast.set(groupId, Date.now());
+    return `${textReply} ${k}`;
+  };
   const baseHistoryDir = process.env.CHAT_HISTORY_DIR ?? path.join(process.cwd(), "data", "chat-history");
 
   const runtimeFor = (groupId: string): Promise<ChatRuntime> => {
@@ -274,7 +293,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           console.log(`[qq-bot] 群 ${groupId} 语音转写：${heard}`);
           const { text: reply } = await sendUserMessage(chat, heard);
           if (reply === null || reply === "") return;
-          const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
+          const flat = withKaomoji(groupId, chat, reply.replace(/\s*\r?\n\s*/g, " ").trim()); // 群聊单行+颜文字
           for (const chunk of splitForSend(flat, config.maxReplyLen)) {
             await httpPost(config.httpBase, "/send_group_msg", {
               group_id: ev.group_id,
@@ -434,7 +453,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
             : effectiveText;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
-      const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
+      const flat = withKaomoji(groupId, chat, reply.replace(/\s*\r?\n\s*/g, " ").trim()); // 群聊单行+颜文字
       for (const chunk of splitForSend(flat, config.maxReplyLen)) {
         await httpPost(config.httpBase, "/send_group_msg", {
           group_id: ev.group_id,
