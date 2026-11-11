@@ -236,10 +236,11 @@ export function extractUserText(ev: OneBotGroupEvent, selfId: number, trigger: s
   let body = stripCqCodes(raw).trim();
   if (body === "") return null;
   if (!mentioned) {
-    // 字面 @（有些客户端 @ 只产生纯文本）也视为提及；否则必须是触发词开头
+    // 字面 @（有些客户端 @ 只产生纯文本）也视为提及；
+    // 或消息里出现触发词（不要求是第一个字）即触发，并把触发词从文本中去掉
     body = body.replace(/^[@＠]\s*/, "");
-    if (!body.startsWith(trigger)) return null;
-    body = body.slice(trigger.length);
+    if (!body.includes(trigger)) return null;
+    body = body.split(trigger).join("");
   }
   const text = stripCqCodes(body).trim();
   return text === "" ? null : text;

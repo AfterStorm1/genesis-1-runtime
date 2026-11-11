@@ -54,6 +54,18 @@ describe("qq bot (onebot 11 parsing)", () => {
     expect(extractUserText({ ...ev, raw_message: "今天天气不错" }, 100, "蕙")).toBeNull();
   });
 
+  it("消息中间出现触发词也触发（不要求第一个字）", () => {
+    const ev = {
+      post_type: "message",
+      message_type: "group",
+      group_id: 123,
+      self_id: 100,
+      raw_message: "你们知道蕙去哪了吗",
+    };
+    expect(extractUserText(ev, 100, "蕙")).toBe("你们知道去哪了吗");
+    expect(extractUserText({ ...ev, raw_message: "没有那个字" }, 100, "蕙")).toBeNull();
+  });
+
   it("字面 @（纯文本，无 CQ at 段）也视为提及", () => {
     const ev = {
       post_type: "message",
