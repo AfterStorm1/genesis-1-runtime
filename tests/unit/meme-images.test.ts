@@ -28,7 +28,6 @@ describe("meme image dictionary", () => {
   it("内置库可加载且非空", () => {
     const entries = loadMemeImages(path.join(process.cwd(), "config", "world", "meme-images.md"));
     expect(entries.length).toBeGreaterThanOrEqual(8);
-    fs.rmSync(os.tmpdir(), { recursive: false, force: true }); // no-op 防误删（占位）
   });
 
   it("写入 meme-images 证据产物", () => {
