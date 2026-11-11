@@ -416,7 +416,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const cmd = parseOwnerCommand(text);
       if (cmd !== null) {
         enqueue(groupId, async () => {
-          await handleOwnerCommand(cmd, groupId, config, runtimes, lastReplyAt, baseHistoryDir);
+          await handleOwnerCommand(cmd, groupId, { config, runtimes, lastReplyAt, baseHistoryDir });
         });
         return;
       }
