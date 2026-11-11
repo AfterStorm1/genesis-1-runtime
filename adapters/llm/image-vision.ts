@@ -1,11 +1,19 @@
 // Genesis-1 · 图片识别（值级；OpenAI 兼容视觉模型，默认 SiliconFlow Qwen2.5-VL）
 // 环境变量：VISION_BASE_URL / VISION_MODEL / VISION_KEY（默认复用 STT_CLOUD_KEY）
+import fs from "node:fs";
 import { resolveCloudConfig } from "../stt/cloud-transcriber";
 
 export interface VisionConfig {
   baseUrl: string;
   model: string;
   key?: string;
+}
+
+export interface VisionImageInput {
+  /** 图片 url（QQ CDN，可能被拒） */
+  url?: string;
+  /** 本地文件路径（NapCat 缓存，优先使用） */
+  localPath?: string;
 }
 
 export function resolveVisionConfig(): VisionConfig {
@@ -18,16 +26,28 @@ export function resolveVisionConfig(): VisionConfig {
 }
 
 export interface ImageDescription {
-  /** 描述文本；识别失败返回 null */
-  describeImage(imageUrl: string): Promise<string | null>;
+  /** 描述图片；识别失败返回 null */
+  describeImage(input: VisionImageInput): Promise<string | null>;
+}
+
+function mimeOf(name: string): string {
+  if (name.includes(".png")) return "image/png";
+  if (name.includes(".gif")) return "image/gif";
+  if (name.includes(".webp")) return "image/webp";
+  return "image/jpeg";
 }
 
 export function createImageDescriber(): ImageDescription {
   const config = resolveVisionConfig();
 
-  /** QQ CDN 链接带时效签名、第三方平台拉不到：先下载到本地再转 base64 直传 */
-  async function toDataUri(url: string): Promise<string> {
-    const res = await fetch(url, {
+  /** 优先本地文件；否则下载 url（带浏览器头）→ base64 直传 */
+  async function toDataUri(input: VisionImageInput): Promise<string> {
+    if (input.localPath !== undefined && fs.existsSync(input.localPath)) {
+      const buf = fs.readFileSync(input.localPath);
+      return `data:${mimeOf(input.localPath)};base64,${buf.toString("base64")}`;
+    }
+    if (input.url === undefined) throw new Error("no_image_source");
+    const res = await fetch(input.url, {
       headers: {
         // QQ 资源服务器要求浏览器特征，否则 400
         "User-Agent":
@@ -37,19 +57,18 @@ export function createImageDescriber(): ImageDescription {
     });
     if (!res.ok) throw new Error(`image_download_http_${res.status}`);
     const buf = Buffer.from(await res.arrayBuffer());
-    const mime = url.includes(".png") ? "image/png" : url.includes(".gif") ? "image/gif" : "image/jpeg";
-    return `data:${mime};base64,${buf.toString("base64")}`;
+    return `data:${mimeOf(input.url)};base64,${buf.toString("base64")}`;
   }
 
   return {
-    async describeImage(imageUrl: string): Promise<string | null> {
+    async describeImage(input: VisionImageInput): Promise<string | null> {
       if (config.key === undefined) {
         // eslint-disable-next-line no-console
         console.warn("[vision] 未配置 VISION_KEY/STT_CLOUD_KEY，跳过图片识别");
         return null;
       }
       try {
-        const dataUri = await toDataUri(imageUrl);
+        const dataUri = await toDataUri(input);
         const res = await fetch(`${config.baseUrl}/chat/completions`, {
           method: "POST",
           headers: {

@@ -474,14 +474,18 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
     }
 
-    // 图片 URL：优先消息数组段，兜底 raw CQ 码；QQ 的 url 可能是百分号编码
+    // 图片 URL/本地路径：优先消息数组段，兜底 raw CQ 码；QQ 的 url 可能是百分号编码
     const rawImgUrl = extractCqImageUrl(ev.raw_message ?? "");
     let imgUrl = rawImgUrl;
-    if (imgUrl === null && Array.isArray(ev.message)) {
+    let imgLocal: string | undefined;
+    if (Array.isArray(ev.message)) {
       for (const m of ev.message) {
-        if (m.type === "image" && typeof m.data?.url === "string") {
-          imgUrl = m.data.url;
-          break;
+        if (m.type !== "image") continue;
+        if (imgUrl === null && typeof m.data?.url === "string") imgUrl = m.data.url;
+        if (imgLocal === undefined && typeof m.data?.path === "string" && m.data.path !== "") {
+          imgLocal = m.data.path; // NapCat 本地缓存（优先，绕过 CDN 400）
+        } else if (imgLocal === undefined && typeof m.data?.file === "string" && path.isAbsolute(m.data.file)) {
+          imgLocal = m.data.file;
         }
       }
     }
@@ -544,8 +548,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       // 图片识别：消息里带了图 → 视觉模型描述后附进上下文；
       // 纯文字触发 → 开启等图窗口（窗口内的下一张图才识别）
       let effectiveText = text;
-      if (imgUrl !== null) {
-        const desc = await imageDescriber.describeImage(imgUrl);
+      if (imgUrl !== null || imgLocal !== undefined) {
+        const desc = await imageDescriber.describeImage({ url: imgUrl ?? undefined, localPath: imgLocal });
         if (desc !== null) {
           // eslint-disable-next-line no-console
           console.log(`[qq-bot] 群 ${groupId} 图片识别：${desc.slice(0, 40)}`);
