@@ -20,7 +20,7 @@ export interface QqBotConfig {
   httpBase: string;
   /** 访问令牌（NapCat 网络配置里设置了令牌时必填；也可在 WebUI 里留空） */
   token?: string;
-  /** 亲近的人 QQ 号集合（QQ_OWNER_IDS 逗号分隔；仅这些人可发 ! 管理指令，消息带身份注记） */
+  /** 管理员 QQ 号集合（QQ_OWNER_IDS 逗号分隔；仅管理员可发 ! 管理指令，消息带身份注记） */
   ownerIds: Set<string>;
   /** 触发词（无 @ 时以此开头触发），默认“蕙” */
   trigger: string;
@@ -264,7 +264,7 @@ export async function handleOwnerCommand(
       ctx.config.token,
     );
     // eslint-disable-next-line no-console
-    console.log(`[qq-bot] 亲近的人已重置群 ${groupId}`);
+    console.log(`[qq-bot] 管理员已重置群 ${groupId}`);
     return;
   }
   if (cmd === "status") {
@@ -411,7 +411,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     const senderId = String(ev.user_id ?? "");
     const isOwner = config.ownerIds.has(senderId);
 
-    // —— 管理指令（仅亲近的人；群员发 ! 开头直接忽略）——
+    // —— 管理指令（仅管理员；群员发 ! 开头直接忽略）——
     if (isOwner) {
       const cmd = parseOwnerCommand(text);
       if (cmd !== null) {
@@ -422,7 +422,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
     } else if (text.trim().startsWith("!")) {
       // eslint-disable-next-line no-console
-      console.log(`[qq-bot] 群 ${groupId} 非亲近成员尝试指令，忽略`);
+      console.log(`[qq-bot] 群 ${groupId} 非管理员尝试指令，忽略`);
       return;
     }
 
@@ -434,10 +434,10 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const chat = await runtimeFor(groupId);
       if (chat.guard.terminated) {
         logTerminated(groupId);
-        return; // 终止状态：该群不再回应（亲近的人可用 !reset 重置）
+        return; // 终止状态：该群不再回应（管理员可用 !reset 重置）
       }
       // 身份由宿主判定注入：亲近的人的消息带系统注记（群员无法伪造）
-      const inputText = isOwner ? `[系统注记：这是那个与你亲近的人的消息]\n${text}` : text;
+      const inputText = isOwner ? `[系统注记：这是管理员的消息]\n${text}` : text;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
       const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
