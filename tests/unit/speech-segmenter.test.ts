@@ -11,18 +11,22 @@ describe("speech segmenter", () => {
     expect(segmentSpeech("好……")).toEqual(["好……"]); // 纯省略号残段并入前句，不单独成行
   });
 
-  it("≤25 字单句为原子单元，不拆", () => {
+  it("≤40 字单句为原子单元，不拆", () => {
     const s = "这正好是二十五个字的一句话给你看就这样";
-    expect(s.length).toBeLessThanOrEqual(25);
+    expect(s.length).toBeLessThanOrEqual(40);
     expect(segmentSpeech(s)).toEqual([s]);
   });
 
-  it("超长句在语义边界（25 字内最后一个逗号）切分", () => {
+  it("超长句在语义边界切分（显式 25 字上限；默认上限 40）", () => {
     const raw = "前面是一段比较长的说明文字，这里需要切一下，后面还有内容要接着说下去的话";
-    const segs = segmentSpeech(raw);
+    const segs = segmentSpeech(raw, 25);
     expect(segs.length).toBeGreaterThan(1);
     for (const s of segs) expect(s.length).toBeLessThanOrEqual(25);
     expect(segs.join("")).toBe(raw);
+    // 默认上限 40：同一段话不再被硬切碎
+    const segs40 = segmentSpeech(raw);
+    for (const s of segs40) expect(s.length).toBeLessThanOrEqual(40);
+    expect(segs40.join("")).toBe(raw);
   });
 
   it("问号保留在句尾；句号/感叹号/分号留在句尾待后处理删除", () => {
@@ -36,6 +40,6 @@ describe("speech segmenter", () => {
   });
 
   it("写入 speech-segmenter 证据产物", () => {
-    writeEvidenceLog("speech-segmenter.test", ["25-char atomic; semantic split; punctuation keep"], true);
+    writeEvidenceLog("speech-segmenter.test", ["40-char atomic default; semantic split; punctuation keep"], true);
   });
 });
