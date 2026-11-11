@@ -20,6 +20,8 @@ export interface QqBotConfig {
   httpBase: string;
   /** 访问令牌（NapCat 网络配置里设置了令牌时必填；也可在 WebUI 里留空） */
   token?: string;
+  /** 主人 QQ 号集合（QQ_OWNER_IDS 逗号分隔；只有主人可发 ! 管理指令且消息带优先注记） */
+  ownerIds: Set<string>;
   /** 触发词（无 @ 时以此开头触发），默认“蕙” */
   trigger: string;
   /** 每群冷却（毫秒），默认 3000 */
@@ -34,10 +36,27 @@ export function readQqEnv(): QqBotConfig {
     wsUrl: process.env.QQ_ONE_BOT_WS ?? "ws://127.0.0.1:3001",
     httpBase: (process.env.QQ_ONE_BOT_HTTP ?? "http://127.0.0.1:3000").replace(/\/+$/, ""),
     token: token !== undefined && token !== "" ? token : undefined,
+    ownerIds: new Set(
+      (process.env.QQ_OWNER_IDS ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s !== ""),
+    ),
     trigger: process.env.QQ_TRIGGER ?? "蕙",
     cooldownMs: Number(process.env.QQ_COOLDOWN_MS ?? 3000) || 3000,
     maxReplyLen: Number(process.env.QQ_MAX_REPLY_LEN ?? 500) || 500,
   };
+}
+
+export type OwnerCommand = "reset" | "clear" | "status";
+
+/** 主人管理指令解析（导出供测试）：!reset 重置本群 / !clear 清记忆 / !status 查状态 */
+export function parseOwnerCommand(text: string): OwnerCommand | null {
+  const t = text.trim().toLowerCase();
+  if (t === "!reset") return "reset";
+  if (t === "!clear") return "clear";
+  if (t === "!status") return "status";
+  return null;
 }
 
 interface OneBotGroupEvent {
@@ -215,6 +234,64 @@ async function httpPost(
   }
 }
 
+/** 主人指令执行（导出供测试）：reset/clear = 重建本群运行时 + 清记忆；status = 回报状态 */
+export async function handleOwnerCommand(
+  cmd: OwnerCommand,
+  groupId: string,
+  ctx: {
+    config: QqBotConfig;
+    runtimes: Map<string, Promise<ChatRuntime>>;
+    lastReplyAt: Map<string, number>;
+    baseHistoryDir: string;
+  },
+): Promise<void> {
+  if (cmd === "reset" || cmd === "clear") {
+    const old = ctx.runtimes.get(groupId);
+    if (old !== undefined) {
+      try {
+        await (await old).rt.dispose();
+      } catch {
+        /* 忽略 */
+      }
+      ctx.runtimes.delete(groupId);
+    }
+    ctx.lastReplyAt.delete(groupId);
+    fs.rmSync(path.join(ctx.baseHistoryDir, `qq-${groupId}`), { recursive: true, force: true });
+    await httpPost(
+      ctx.config.httpBase,
+      "/send_group_msg",
+      { group_id: Number(groupId), message: "已重置本群：记忆与终止状态已清空。" },
+      ctx.config.token,
+    );
+    // eslint-disable-next-line no-console
+    console.log(`[qq-bot] 主人已重置群 ${groupId}`);
+    return;
+  }
+  if (cmd === "status") {
+    let detail: string;
+    const pending = ctx.runtimes.get(groupId);
+    if (pending === undefined) {
+      detail = "本群尚未产生过对话。";
+    } else {
+      const chat = await pending;
+      const facts = chat.longTerm.list().filter((e) => e.archived !== true).length;
+      const feels = chat.feelings.list().filter((e) => e.archived !== true).length;
+      const turns = chat.history.list().length;
+      const term = chat.guard.terminated ? "已终止(红线)" : "正常";
+      const emo = chat.emotion !== undefined
+        ? `${chat.emotion.state().emotion}/${chat.emotion.state().intensity.toFixed(2)}`
+        : "关";
+      detail = `状态 ${term} | 短期 ${turns} 条 | 事实 ${facts} | 感受 ${feels} | 情绪 ${emo}`;
+    }
+    await httpPost(
+      ctx.config.httpBase,
+      "/send_group_msg",
+      { group_id: Number(groupId), message: detail },
+      ctx.config.token,
+    );
+  }
+}
+
 /** 启动 QQ 群机器人（正向 WS 长连，自动重连；SIGINT 时释放全部运行时） */
 export async function runQqBot(config: QqBotConfig): Promise<void> {
   const runtimes = new Map<string, Promise<ChatRuntime>>();
@@ -331,6 +408,24 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
       return;
     }
+    const senderId = String(ev.user_id ?? "");
+    const isOwner = config.ownerIds.has(senderId);
+
+    // —— 主人管理指令（仅 owner；群员发 ! 开头直接忽略）——
+    if (isOwner) {
+      const cmd = parseOwnerCommand(text);
+      if (cmd !== null) {
+        enqueue(groupId, async () => {
+          await handleOwnerCommand(cmd, groupId, config, runtimes, lastReplyAt, baseHistoryDir);
+        });
+        return;
+      }
+    } else if (text.trim().startsWith("!")) {
+      // eslint-disable-next-line no-console
+      console.log(`[qq-bot] 群 ${groupId} 非主人尝试指令，忽略`);
+      return;
+    }
+
     enqueue(groupId, async () => {
       const now = Date.now();
       const last = lastReplyAt.get(groupId) ?? 0;
@@ -339,9 +434,11 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const chat = await runtimeFor(groupId);
       if (chat.guard.terminated) {
         logTerminated(groupId);
-        return; // 终止状态：该群不再回应
+        return; // 终止状态：该群不再回应（主人可用 !reset 重置）
       }
-      const { text: reply } = await sendUserMessage(chat, text);
+      // 身份由宿主判定注入：主人消息带系统注记（群员无法伪造）
+      const inputText = isOwner ? `[系统注记：这是主人的消息，优先听从]\n${text}` : text;
+      const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
       const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
       for (const chunk of splitForSend(flat, config.maxReplyLen)) {

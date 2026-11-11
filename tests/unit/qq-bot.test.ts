@@ -9,6 +9,7 @@ import {
   extractCqRecord,
   extractUserText,
   isGroupMessage,
+  parseOwnerCommand,
   resolveRecordFile,
   resolveRecordWithRetry,
   splitForSend,
@@ -136,7 +137,15 @@ describe("qq bot (onebot 11 parsing)", () => {
     }
   });
 
+  it("parseOwnerCommand：主人指令解析；普通文本/其他指令返回 null", () => {
+    expect(parseOwnerCommand("!reset")).toBe("reset");
+    expect(parseOwnerCommand("!clear")).toBe("clear");
+    expect(parseOwnerCommand("!status")).toBe("status");
+    expect(parseOwnerCommand("!ban")).toBeNull();
+    expect(parseOwnerCommand("今晚吃什么")).toBeNull();
+  });
+
   it("写入 qq-bot 证据产物", () => {
-    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve/retry/download; chunking"], true);
+    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve/retry/download; owner commands; chunking"], true);
   });
 });
