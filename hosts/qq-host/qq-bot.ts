@@ -20,8 +20,10 @@ export interface QqBotConfig {
   httpBase: string;
   /** 访问令牌（NapCat 网络配置里设置了令牌时必填；也可在 WebUI 里留空） */
   token?: string;
-  /** 管理员 QQ 号集合（QQ_OWNER_IDS 逗号分隔；仅管理员可发 ! 管理指令，消息带身份注记） */
+  /** 管理员 QQ 号集合（QQ_OWNER_IDS 逗号分隔；仅管理员可发 ! 管理指令，消息带管理员注记） */
   ownerIds: Set<string>;
+  /** 好朋友 QQ 号集合（QQ_FRIEND_IDS 逗号分隔；消息带好朋友注记，无管理权限） */
+  friendIds: Set<string>;
   /** 触发词（无 @ 时以此开头触发），默认“蕙” */
   trigger: string;
   /** 每群冷却（毫秒），默认 3000 */
@@ -30,18 +32,23 @@ export interface QqBotConfig {
   maxReplyLen: number;
 }
 
+function csvSet(v: string | undefined): Set<string> {
+  return new Set(
+    (v ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s !== ""),
+  );
+}
+
 export function readQqEnv(): QqBotConfig {
   const token = process.env.QQ_ONE_BOT_TOKEN;
   return {
     wsUrl: process.env.QQ_ONE_BOT_WS ?? "ws://127.0.0.1:3001",
     httpBase: (process.env.QQ_ONE_BOT_HTTP ?? "http://127.0.0.1:3000").replace(/\/+$/, ""),
     token: token !== undefined && token !== "" ? token : undefined,
-    ownerIds: new Set(
-      (process.env.QQ_OWNER_IDS ?? "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s !== ""),
-    ),
+    ownerIds: csvSet(process.env.QQ_OWNER_IDS),
+    friendIds: csvSet(process.env.QQ_FRIEND_IDS),
     trigger: process.env.QQ_TRIGGER ?? "蕙",
     cooldownMs: Number(process.env.QQ_COOLDOWN_MS ?? 3000) || 3000,
     maxReplyLen: Number(process.env.QQ_MAX_REPLY_LEN ?? 500) || 500,
@@ -436,8 +443,13 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         logTerminated(groupId);
         return; // 终止状态：该群不再回应（管理员可用 !reset 重置）
       }
-      // 身份由宿主判定注入：亲近的人的消息带系统注记（群员无法伪造）
-      const inputText = isOwner ? `[系统注记：这是管理员的消息]\n${text}` : text;
+      // 身份由宿主判定注入：管理员/好朋友的消息带系统注记（群员无法伪造）
+      const isFriend = config.friendIds.has(senderId);
+      const inputText = isOwner
+        ? `[系统注记：这是管理员的消息]\n${text}`
+        : isFriend
+          ? `[系统注记：这是你的好朋友的消息]\n${text}`
+          : text;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
       const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
