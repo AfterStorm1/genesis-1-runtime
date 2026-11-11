@@ -24,6 +24,16 @@ export interface ImageDescription {
 
 export function createImageDescriber(): ImageDescription {
   const config = resolveVisionConfig();
+
+  /** QQ CDN 链接带时效签名、第三方平台拉不到：先下载到本地再转 base64 直传 */
+  async function toDataUri(url: string): Promise<string> {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`image_download_http_${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    const mime = url.includes(".png") ? "image/png" : url.includes(".gif") ? "image/gif" : "image/jpeg";
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  }
+
   return {
     async describeImage(imageUrl: string): Promise<string | null> {
       if (config.key === undefined) {
@@ -32,6 +42,7 @@ export function createImageDescriber(): ImageDescription {
         return null;
       }
       try {
+        const dataUri = await toDataUri(imageUrl);
         const res = await fetch(`${config.baseUrl}/chat/completions`, {
           method: "POST",
           headers: {
@@ -45,7 +56,7 @@ export function createImageDescriber(): ImageDescription {
                 role: "user",
                 content: [
                   { type: "text", text: "用两三句话描述这张图，注意主体、动作、表情和图中文字（如有）。" },
-                  { type: "image_url", image_url: { url: imageUrl } },
+                  { type: "image_url", image_url: { url: dataUri } },
                 ],
               },
             ],
@@ -53,8 +64,9 @@ export function createImageDescriber(): ImageDescription {
           }),
         });
         if (!res.ok) {
+          const body = await res.text().catch(() => "");
           // eslint-disable-next-line no-console
-          console.warn(`[vision] 识别失败 http_${res.status}`);
+          console.warn(`[vision] 识别失败 http_${res.status}: ${body.slice(0, 200)}`);
           return null;
         }
         const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
