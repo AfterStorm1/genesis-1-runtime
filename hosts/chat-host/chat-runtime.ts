@@ -116,11 +116,21 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
     }
     samplesBlock = buildFewShotBlock(samples) || undefined;
   }
+  // 网络梗词典（理解层：懂梗、不主动玩梗；CHAT_MEMES 可覆盖路径）
+  const memesPath =
+    process.env.CHAT_MEMES !== undefined
+      ? path.resolve(process.env.CHAT_MEMES)
+      : path.join(process.cwd(), "config", "world", "memes.md");
+  const memesBlock =
+    fs.existsSync(memesPath) && fs.readFileSync(memesPath, "utf8").trim() !== ""
+      ? `[网络梗词典——理解用，不必主动使用]\n${fs.readFileSync(memesPath, "utf8").trim()}`
+      : undefined;
   const extraSystemPrompt =
     [
       env.extraSystem,
       worldRules?.trim() ? `[世界观/规则]\n${worldRules.trim()}` : undefined,
       samplesBlock,
+      memesBlock,
     ]
       .filter((x): x is string => x !== undefined)
       .join("\n\n") || undefined;
