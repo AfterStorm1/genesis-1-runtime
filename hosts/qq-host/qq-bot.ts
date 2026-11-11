@@ -469,15 +469,39 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
     }
 
+    // 图片 URL：优先消息数组段，兜底 raw CQ 码；QQ 的 url 可能是百分号编码
+    const rawImgUrl = extractCqImageUrl(ev.raw_message ?? "");
+    let imgUrl = rawImgUrl;
+    if (imgUrl === null && Array.isArray(ev.message)) {
+      for (const m of ev.message) {
+        if (m.type === "image" && typeof m.data?.url === "string") {
+          imgUrl = m.data.url;
+          break;
+        }
+      }
+    }
+    if (imgUrl !== null && /^https?%3A/i.test(imgUrl)) {
+      try {
+        imgUrl = decodeURIComponent(imgUrl);
+      } catch {
+        /* 保持原样 */
+      }
+    }
+
     let text = quotedMe
       ? stripCqCodes(ev.raw_message ?? "").trim()
       : extractUserText(ev, ev.self_id, config.trigger);
+    // 触发但没文字（比如只发了一张图）：图片本身构成内容，不提前返回
     if (text === "" || text === null) {
-      if (!quotedMe && !/\[CQ:(image|face|at)/.test(ev.raw_message ?? "")) {
-        // eslint-disable-next-line no-console
-        console.log(`[qq-bot] 未触发 群${groupId}：需要 @机器人 或以“${config.trigger}”开头`);
+      if (imgUrl !== null) {
+        text = ""; // 有图即内容，继续走图片识别
+      } else {
+        if (!quotedMe && !/\[CQ:(image|face|at)/.test(ev.raw_message ?? "")) {
+          // eslint-disable-next-line no-console
+          console.log(`[qq-bot] 未触发 群${groupId}：需要 @机器人 或以“${config.trigger}”开头`);
+        }
+        return;
       }
-      return;
     }
 
     // —— 管理指令（仅管理员；群员发 ! 开头直接忽略）——
@@ -507,13 +531,15 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
       // 图片识别：消息里带了图 → 视觉模型描述后附进上下文
       let effectiveText = text;
-      const imgUrl = extractCqImageUrl(ev.raw_message ?? "");
       if (imgUrl !== null) {
         const desc = await imageDescriber.describeImage(imgUrl);
         if (desc !== null) {
           // eslint-disable-next-line no-console
           console.log(`[qq-bot] 群 ${groupId} 图片识别：${desc.slice(0, 40)}`);
           effectiveText = `${effectiveText}\n（对方还发了一张图：${desc}）`;
+        } else if (effectiveText.trim() === "") {
+          // 视觉不可用且无文字：至少告诉模型有张图（她可以按性格回应“看不太清”之类）
+          effectiveText = "（对方发了一张图，但这边没看清）";
         }
       }
       // 身份由宿主判定注入：管理员/好朋友的消息带系统注记（群员无法伪造）
