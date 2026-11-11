@@ -1,33 +1,31 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-11T02:02:33.251Z（北京时间 2026/11/11 10:02:33）
+> 自动生成时间：2026-11-11T20:00:07.871Z（北京时间 2026/11/12 04:00:07）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
 ## 自动快照
 
 - Node 版本：v24.22.1
-- 代码规模：core 54 个文件 / adapters 30 / tests 44 / 全仓约 217 个文件（不含 node_modules）
-- 测试用例：约 242 个（unit + e2e，含 A01a–A17 对应断言）
+- 代码规模：core 54 个文件 / adapters 32 / tests 45 / 全仓约 222 个文件（不含 node_modules）
+- 测试用例：约 250 个（unit + e2e，含 A01a–A17 对应断言）
 - 证据产物：18/18；CI 状态：CI 全绿
 
 ### 最近提交（git log -8）
 
-`034ca8c fix: de-terse Hui — 15-40 char range with 2-3 sentence allowance, medium-length few-shots, segmenter 40 cap`
-`0839a8d content: drop 这位 as form of address (impolite); address rules simplified`
-`f539869 content: friend aliases recorded (水滴=苔绿tars/绿, 鸟=诺)`
-`49f15bc feat: two named friends — 水滴(3323546045) and 鸟(171581863) via QQ_FRIEND_NAMES; per-person note`
-`6e8bf5a docs: QQ_FRIEND_IDS example line`
-`354867f feat: QQ friend list — QQ_FRIEND_IDS recognized with note (no admin powers); nicknames in rules`
-`9b6363a rename: role term now 管理员 (admin) in rules/notes/logs`
-`a00a493 refine: neutral naming — owner role now 亲近的人 (close/trusted person) in rules, notes and logs`
+`b17c1e0 fix: friend display name 绿/苔绿Tars (config + rules synced)`
+`cc71156 overwrite permanent layer: new persona (home/first-mes), new rules (老板/喜欢的人/星见小鹿/观察-黑名单/b站生活), remove meme-image pairing, friend config v3`
+`53946e9 content: reorganize rules — narrative order (world→life→identity→speech), tech spec moved to appendix`
+`55a2916 content: pre-reply internal check — personal memories only on trigger+motive, carried as aside, never itinerary-led`
+`4c01cf4 fix: remove stray tmpdir rm line from test`
+`44e5b66 feat: meme-image fixed-pairing dictionary — vision description matches curated meme meanings/replies`
+`6d12527 fix: misidentifying strangers as friends — explicit stranger identity note + no-confusion rules`
+`f2f48cf feat: mood-driven kaomoji in group chat — happy + cooldown gate, host-controlled pacing`
 
 ### 本地 Ollama 模型
 
 ```
-qwen2.5:7b
-qwen3:8b
-（来源：磁盘 manifest）
+（ollama 不可用或未安装）
 ```
 
 ---
