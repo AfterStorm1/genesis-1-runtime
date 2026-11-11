@@ -5,10 +5,11 @@ import { isSanitizedText } from "../../core/contract/speech";
 import { writeEvidenceLog } from "../helpers/evidence";
 
 describe("speech postprocess", () => {
-  it("语言过滤表：整词移除（长词优先，短词不误伤语义核心）", () => {
-    expect(postprocessSpeech("坐这吧呢")).toBe("坐这吧");
+  it("语言过滤表：只滤口癖词；语气词（呢/哦/啦）放行以柔化语气", () => {
     expect(postprocessSpeech("我说话就这样，不用说了")).toBe("，");
-    expect(postprocessSpeech("好哦好哦啦")).toBe("好好");
+    expect(postprocessSpeech("坐这吧呢")).toBe("坐这吧呢"); // 语气词保留
+    expect(postprocessSpeech("好哦好哦啦")).toBe("好哦好哦啦");
+    expect(postprocessSpeech("绝绝子")).toBe("");
   });
 
   it("句尾标点：句号/感叹号/分号去掉，问号与省略号保留", () => {

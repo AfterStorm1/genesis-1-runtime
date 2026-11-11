@@ -6,11 +6,9 @@
 import type { SpeechPayload } from "../../core/contract/speech";
 import { markSanitized } from "../../core/contract/speech";
 
-/** 默认语言过滤表（角色规范：不进入 prompt，仅在输出侧过滤） */
+/** 默认语言过滤表（角色规范：不进入 prompt，仅在输出侧过滤）
+ *  只滤网络口癖类；「呢」「哦」「啦」等正常语气词已放行（柔化语气，不再显得冷硬） */
 export const DEFAULT_SPEECH_FILTER: readonly string[] = [
-  "呢",
-  "哦",
-  "啦",
   "超级",
   "绝绝子",
   "爱了",

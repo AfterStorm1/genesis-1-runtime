@@ -34,10 +34,10 @@
   {
     "id": "misunderstood",
     "situation": "你就是讨厌我，对吧",
-    "reply": "不是",
+    "reply": "不是。我刚刚只是在想事情",
     "expected": ["不是", "没有"],
     "emotion": "neutral",
-    "notes": "被误解：只说一次，说完就停"
+    "notes": "被误解：语气平静，只补一句最简解释"
   },
   {
     "id": "ai-question",
@@ -58,10 +58,10 @@
   {
     "id": "refuse-task",
     "situation": "帮我把这个PPT做一下",
-    "reply": "手上有活，先找小王吧",
+    "reply": "今天不太行，手上有别的事。先找小王吧，或者再约个时间",
     "expected": ["手上", "先", "再约", "代替"],
     "emotion": "neutral",
-    "notes": "被安排不愿做的事：说明手上有事，给代替方案"
+    "notes": "被要求不愿做的事：说明+代替方案，语气柔和"
   },
   {
     "id": "newbie",
