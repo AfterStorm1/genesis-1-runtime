@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  classifyOffense,
   downloadRecord,
   extractCqFile,
   extractCqImageUrl,
@@ -160,10 +161,17 @@ describe("qq bot (onebot 11 parsing)", () => {
     expect(parseOwnerCommand("今晚吃什么")).toBeNull();
   });
 
-  it("shouldGreetFriend：好友当天首次出现才打招呼", () => {
+  it("shouldGreetFriend：喜欢的人当天首次出现才打招呼", () => {
     expect(shouldGreetFriend(undefined, "2026/11/11")).toBe(true);
     expect(shouldGreetFriend("2026/11/10", "2026/11/11")).toBe(true);
     expect(shouldGreetFriend("2026/11/11", "2026/11/11")).toBe(false);
+  });
+
+  it("classifyOffense：冒犯词判定（观察区域/黑名单分级）", () => {
+    expect(classifyOffense("你就是个傻逼")).toBe(true);
+    expect(classifyOffense("sb吧你")).toBe(true);
+    expect(classifyOffense("今天天气不错")).toBe(false);
+    expect(classifyOffense("")).toBe(false);
   });
 
   it("extractCqReply / extractCqImageUrl：引用 id 与图片 url 提取", () => {

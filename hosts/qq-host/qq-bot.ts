@@ -10,14 +10,32 @@ import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
 import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whisper-engine";
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
-import { loadMemeImages, matchMemeImages, memeMatchNote } from "../../adapters/llm/meme-images";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
 /** 图片识别（视觉模型，key 复用 SiliconFlow） */
 const imageDescriber = createImageDescriber();
-/** 表情包固定搭配库（config/world/meme-images.md） */
-const memeEntries = loadMemeImages(path.join(process.cwd(), "config", "world", "meme-images.md"));
+
+/** 冒犯词（观察区域判定；严重越界另有终止钩子） */
+export const OFFENSE_WORDS: readonly string[] = [
+  "傻逼",
+  "煞笔",
+  "脑残",
+  "白痴",
+  "弱智",
+  "废物",
+  "去死",
+  "贱人",
+  "sb",
+  "nmsl",
+  "智障",
+];
+
+/** 是否冒犯言论（导出供测试） */
+export function classifyOffense(text: string): boolean {
+  const t = text.toLowerCase();
+  return OFFENSE_WORDS.some((w) => t.includes(w.toLowerCase()));
+}
 
 export interface QqBotConfig {
   /** OneBot 正向 WebSocket 地址（NapCat 配置），默认 ws://127.0.0.1:3001 */
@@ -143,6 +161,8 @@ export async function handleOwnerCommand(
     runtimes: Map<string, Promise<ChatRuntime>>;
     lastReplyAt: Map<string, number>;
     baseHistoryDir: string;
+    offenses: Map<string, Map<string, number>>;
+    blacklists: Map<string, Set<string>>;
   },
 ): Promise<void> {
   if (cmd === "reset" || cmd === "clear") {
@@ -156,6 +176,8 @@ export async function handleOwnerCommand(
       ctx.runtimes.delete(groupId);
     }
     ctx.lastReplyAt.delete(groupId);
+    ctx.offenses.delete(groupId);
+    ctx.blacklists.delete(groupId);
     fs.rmSync(path.join(ctx.baseHistoryDir, `qq-${groupId}`), { recursive: true, force: true });
     await httpPost(
       ctx.config.httpBase,
@@ -203,6 +225,10 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
   const awaitingImage = new Map<string, number>();
   /** 颜文字冷却：群号 → 上次发射时间 */
   const kaomojiLast = new Map<string, number>();
+  /** 冒犯计数：群号 → (QQ号 → 次数) */
+  const offenses = new Map<string, Map<string, number>>();
+  /** 黑名单：群号 → QQ号集合（三次冒犯后不再互动） */
+  const blacklists = new Map<string, Set<string>>();
 
   /** 心情好时按冷却在句尾跟一个颜文字（宿主控制节奏，不滥用） */
   const withKaomoji = (groupId: string, chat: ChatRuntime, textReply: string): string => {
@@ -315,6 +341,41 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
 
     const senderId = String(ev.user_id ?? "");
     const isOwner = config.ownerIds.has(senderId);
+    const isFriend = config.friendIds.has(senderId);
+
+    // —— 冒犯分级（观察区域 → 三次拉黑；不适用于老板/喜欢的人）——
+    let offenseCount = 0;
+    if (!isOwner && !isFriend) {
+      const bl = blacklists.get(groupId);
+      if (bl?.has(senderId)) {
+        // eslint-disable-next-line no-console
+        console.log(`[qq-bot] 群 ${groupId} 已拉黑 ${senderId}，忽略其消息`);
+        return;
+      }
+      const rawText = stripCqCodes(ev.raw_message ?? "");
+      if (classifyOffense(rawText)) {
+        let g = offenses.get(groupId);
+        if (g === undefined) {
+          g = new Map<string, number>();
+          offenses.set(groupId, g);
+        }
+        offenseCount = (g.get(senderId) ?? 0) + 1;
+        g.set(senderId, offenseCount);
+        // eslint-disable-next-line no-console
+        console.log(`[qq-bot] 群 ${groupId} ${senderId} 冒犯第 ${offenseCount} 次，进入观察区域`);
+        if (offenseCount >= 3) {
+          let b = blacklists.get(groupId);
+          if (b === undefined) {
+            b = new Set<string>();
+            blacklists.set(groupId, b);
+          }
+          b.add(senderId);
+          // eslint-disable-next-line no-console
+          console.log(`[qq-bot] 群 ${groupId} 已将 ${senderId} 拉黑，不再互动`);
+          return;
+        }
+      }
+    }
 
     // —— 引用触发：有人引用她说的话 → 自动回复（无需 @/触发词）——
     let quotedMe = false;
@@ -388,7 +449,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const cmd = parseOwnerCommand(text);
       if (cmd !== null) {
         enqueue(groupId, async () => {
-          await handleOwnerCommand(cmd, groupId, { config, runtimes, lastReplyAt, baseHistoryDir });
+          await handleOwnerCommand(cmd, groupId, { config, runtimes, lastReplyAt, baseHistoryDir, offenses, blacklists });
         });
         return;
       }
@@ -427,11 +488,6 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           // eslint-disable-next-line no-console
           console.log(`[qq-bot] 群 ${groupId} 图片识别：${desc.slice(0, 40)}`);
           effectiveText = `${effectiveText}\n（对方还发了一张图：${desc}）`;
-          // 固定搭配匹配：网络上有大量含义接近的回复 → 注入含义与常见回复
-          const memeNote = memeMatchNote(matchMemeImages(desc, memeEntries));
-          if (memeNote !== null) {
-            effectiveText = `${effectiveText}\n${memeNote}`;
-          }
         } else if (effectiveText.trim() === "") {
           // 图没识别出来且没有文字：静默，不给她制造“没收到”的反馈
           return;
@@ -439,12 +495,11 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       } else {
         awaitingImage.set(groupId, Date.now() + config.imageWindowMs);
       }
-      // 身份由宿主判定注入：管理员/好朋友的消息带系统注记（群员无法伪造）
-      const isFriend = config.friendIds.has(senderId);
+      // 身份由宿主判定注入，正反都标清：老板 / 喜欢的人（指名）/ 普通群友（不给模型脑补空间）
       const friendName = config.friendNames.get(senderId);
       let friendGreet = false;
       if (isFriend) {
-        // 好友今天第一次出现 → 主动友好打招呼（按她的方式说，不是模板）
+        // 喜欢的人今天第一次出现 → 主动友好打招呼（按她的方式说，不是模板）
         const today = new Date().toLocaleDateString("zh-CN");
         const key = `${groupId}:${senderId}`;
         if (shouldGreetFriend(friendGreetings.get(key), today)) {
@@ -452,12 +507,12 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           friendGreet = true;
         }
       }
-      // 身份由宿主判定注入，正反都标清：boss / 好朋友（指名）/ 普通群友（不给模型脑补空间）
+      const observeNote = offenseCount > 0 ? `；这个人在观察区域（已冒犯 ${offenseCount} 次）` : "";
       const identityNote = isOwner
-        ? "这是boss的消息"
+        ? "这是老板的消息"
         : isFriend
-          ? `这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}`
-          : "这是普通群友的消息";
+          ? `这是你喜欢的人${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}`
+          : `这是普通群友的消息${observeNote}`;
       const quoteNote = quotedMe && !isOwner && !isFriend ? "；有人引用了你说过的话，回应一下" : "";
       const inputText = `[系统注记：${identityNote}${quoteNote}]\n${effectiveText}`;
       const { text: reply } = await sendUserMessage(chat, inputText);
