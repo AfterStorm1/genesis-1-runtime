@@ -377,7 +377,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     queues.set(groupId, next);
   };
 
-  const handle = (ev: OneBotGroupEvent): void => {
+  const handle = async (ev: OneBotGroupEvent): Promise<void> => {
     if (!isGroupMessage(ev) || ev.group_id === undefined || ev.self_id === undefined) return;
     const groupId = String(ev.group_id);
 
@@ -568,7 +568,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     ws.addEventListener("message", (evt) => {
       try {
         const data = JSON.parse(String(evt.data)) as OneBotGroupEvent;
-        handle(data);
+        void handle(data);
       } catch {
         /* 忽略非 JSON 帧 */
       }
