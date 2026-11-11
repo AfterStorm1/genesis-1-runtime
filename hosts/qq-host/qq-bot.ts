@@ -71,6 +71,11 @@ export function readQqEnv(): QqBotConfig {
 
 export type OwnerCommand = "reset" | "clear" | "status";
 
+/** 好友每日首次问候判定（导出供测试）：今天还没打过招呼 → true */
+export function shouldGreetFriend(lastDate: string | undefined, today: string): boolean {
+  return lastDate !== today;
+}
+
 /** 管理指令解析（导出供测试）：!reset 重置本群 / !clear 清记忆 / !status 查状态 */
 export function parseOwnerCommand(text: string): OwnerCommand | null {
   const t = text.trim().toLowerCase();
@@ -318,6 +323,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
   const runtimes = new Map<string, Promise<ChatRuntime>>();
   const queues = new Map<string, Promise<void>>();
   const lastReplyAt = new Map<string, number>();
+  /** 好友每日首次问候记录：key = "群号:QQ号" → 日期串 */
+  const friendGreetings = new Map<string, string>();
   const baseHistoryDir = process.env.CHAT_HISTORY_DIR ?? path.join(process.cwd(), "data", "chat-history");
 
   const runtimeFor = (groupId: string): Promise<ChatRuntime> => {
@@ -460,10 +467,20 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       // 身份由宿主判定注入：管理员/好朋友的消息带系统注记（群员无法伪造）
       const isFriend = config.friendIds.has(senderId);
       const friendName = config.friendNames.get(senderId);
+      let friendGreet = false;
+      if (isFriend) {
+        // 好友今天第一次出现 → 主动友好打招呼（按她的方式说，不是模板）
+        const today = new Date().toLocaleDateString("zh-CN");
+        const key = `${groupId}:${senderId}`;
+        if (shouldGreetFriend(friendGreetings.get(key), today)) {
+          friendGreetings.set(key, today);
+          friendGreet = true;
+        }
+      }
       const inputText = isOwner
         ? `[系统注记：这是管理员的消息]\n${text}`
         : isFriend
-          ? `[系统注记：这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息]\n${text}`
+          ? `[系统注记：这是你的好朋友${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}]\n${text}`
           : text;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;

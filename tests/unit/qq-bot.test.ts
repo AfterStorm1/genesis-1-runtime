@@ -12,6 +12,7 @@ import {
   parseOwnerCommand,
   resolveRecordFile,
   resolveRecordWithRetry,
+  shouldGreetFriend,
   splitForSend,
   stripCqCodes,
 } from "../../hosts/qq-host/qq-bot";
@@ -145,7 +146,13 @@ describe("qq bot (onebot 11 parsing)", () => {
     expect(parseOwnerCommand("今晚吃什么")).toBeNull();
   });
 
+  it("shouldGreetFriend：好友当天首次出现才打招呼", () => {
+    expect(shouldGreetFriend(undefined, "2026/11/11")).toBe(true);
+    expect(shouldGreetFriend("2026/11/10", "2026/11/11")).toBe(true);
+    expect(shouldGreetFriend("2026/11/11", "2026/11/11")).toBe(false);
+  });
+
   it("写入 qq-bot 证据产物", () => {
-    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve/retry/download; owner commands; chunking"], true);
+    writeEvidenceLog("qq-bot.test", ["group-event filter; @/trigger detection; cq strip; voice record extract/resolve/retry/download; owner commands; daily friend greet; chunking"], true);
   });
 });
