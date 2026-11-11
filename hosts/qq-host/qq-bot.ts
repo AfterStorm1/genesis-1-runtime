@@ -33,6 +33,8 @@ export interface QqBotConfig {
   trigger: string;
   /** 每群冷却（毫秒），默认 3000 */
   cooldownMs: number;
+  /** 触发后等图窗口（毫秒）：触发聊天后的下一张图才识别，默认 60_000 */
+  imageWindowMs: number;
   /** 单条回复最大长度（超出分条发送），默认 500 */
   maxReplyLen: number;
 }
@@ -68,6 +70,7 @@ export function readQqEnv(): QqBotConfig {
     friendNames: nameMap(process.env.QQ_FRIEND_NAMES),
     trigger: process.env.QQ_TRIGGER ?? "蕙",
     cooldownMs: Number(process.env.QQ_COOLDOWN_MS ?? 3000) || 3000,
+    imageWindowMs: Number(process.env.QQ_IMAGE_WINDOW_MS ?? 60_000) || 60_000,
     maxReplyLen: Number(process.env.QQ_MAX_REPLY_LEN ?? 500) || 500,
   };
 }
@@ -351,6 +354,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
   const lastReplyAt = new Map<string, number>();
   /** 好友每日首次问候记录：key = "群号:QQ号" → 日期串 */
   const friendGreetings = new Map<string, string>();
+  /** 触发聊天后的等图窗口：群号 → 截止时间戳（之后的下一张图才识别） */
+  const awaitingImage = new Map<string, number>();
   const baseHistoryDir = process.env.CHAT_HISTORY_DIR ?? path.join(process.cwd(), "data", "chat-history");
 
   const runtimeFor = (groupId: string): Promise<ChatRuntime> => {
@@ -491,10 +496,17 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     let text = quotedMe
       ? stripCqCodes(ev.raw_message ?? "").trim()
       : extractUserText(ev, ev.self_id, config.trigger);
-    // 触发但没文字（比如只发了一张图）：图片本身构成内容，不提前返回
+    // 触发但没文字：图片需在「触发聊天之后的等图窗口」内才识别（只认下一张）
     if (text === "" || text === null) {
       if (imgUrl !== null) {
-        text = ""; // 有图即内容，继续走图片识别
+        const due = awaitingImage.get(groupId) ?? 0;
+        if (Date.now() > due) {
+          // eslint-disable-next-line no-console
+          console.log(`[qq-bot] 群 ${groupId} 忽略图片：没有前置的触发聊天`);
+          return;
+        }
+        awaitingImage.delete(groupId); // 一次性：只认下一张图
+        text = "";
       } else {
         if (!quotedMe && !/\[CQ:(image|face|at)/.test(ev.raw_message ?? "")) {
           // eslint-disable-next-line no-console
@@ -529,7 +541,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         logTerminated(groupId);
         return; // 终止状态：该群不再回应（boss可用 !reset 重置）
       }
-      // 图片识别：消息里带了图 → 视觉模型描述后附进上下文
+      // 图片识别：消息里带了图 → 视觉模型描述后附进上下文；
+      // 纯文字触发 → 开启等图窗口（窗口内的下一张图才识别）
       let effectiveText = text;
       if (imgUrl !== null) {
         const desc = await imageDescriber.describeImage(imgUrl);
@@ -541,6 +554,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           // 视觉不可用且无文字：至少告诉模型有张图（她可以按性格回应“看不太清”之类）
           effectiveText = "（对方发了一张图，但这边没看清）";
         }
+      } else {
+        awaitingImage.set(groupId, Date.now() + config.imageWindowMs);
       }
       // 身份由宿主判定注入：管理员/好朋友的消息带系统注记（群员无法伪造）
       const isFriend = config.friendIds.has(senderId);
