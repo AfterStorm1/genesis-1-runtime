@@ -478,10 +478,12 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     const rawImgUrl = extractCqImageUrl(ev.raw_message ?? "");
     let imgUrl = rawImgUrl;
     let imgLocal: string | undefined;
+    let imgFile: string | undefined;
     if (Array.isArray(ev.message)) {
       for (const m of ev.message) {
         if (m.type !== "image") continue;
         if (imgUrl === null && typeof m.data?.url === "string") imgUrl = m.data.url;
+        if (imgFile === undefined && typeof m.data?.file === "string") imgFile = m.data.file;
         if (imgLocal === undefined && typeof m.data?.path === "string" && m.data.path !== "") {
           imgLocal = m.data.path; // NapCat 本地缓存（优先，绕过 CDN 400）
         } else if (imgLocal === undefined && typeof m.data?.file === "string" && path.isAbsolute(m.data.file)) {
@@ -554,7 +556,17 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       // 图片识别：消息里带了图 → 视觉模型描述后附进上下文；
       // 纯文字触发 → 开启等图窗口（窗口内的下一张图才识别）
       let effectiveText = text;
-      if (imgUrl !== null || imgLocal !== undefined) {
+      if (imgUrl !== null || imgLocal !== undefined || imgFile !== undefined) {
+        // 本地路径缺失时走 NapCat 官方 get_image 接口拿绝对路径（QQ 表情/图片缓存目录）
+        if (imgLocal === undefined && imgFile !== undefined) {
+          try {
+            const gi = await httpApi(config.httpBase, "/get_image", { file: imgFile }, config.token);
+            const f = (gi.data as { file?: string } | undefined)?.file;
+            if (typeof f === "string" && f !== "") imgLocal = f;
+          } catch {
+            /* 保持 undefined，退回 url 下载 */
+          }
+        }
         const desc = await imageDescriber.describeImage({ url: imgUrl ?? undefined, localPath: imgLocal });
         if (desc !== null) {
           // eslint-disable-next-line no-console
