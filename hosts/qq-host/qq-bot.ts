@@ -10,11 +10,14 @@ import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
 import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whisper-engine";
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
+import { loadMemeImages, matchMemeImages, memeMatchNote } from "../../adapters/llm/meme-images";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
 /** 图片识别（视觉模型，key 复用 SiliconFlow） */
 const imageDescriber = createImageDescriber();
+/** 表情包固定搭配库（config/world/meme-images.md） */
+const memeEntries = loadMemeImages(path.join(process.cwd(), "config", "world", "meme-images.md"));
 
 export interface QqBotConfig {
   /** OneBot 正向 WebSocket 地址（NapCat 配置），默认 ws://127.0.0.1:3001 */
@@ -424,6 +427,11 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           // eslint-disable-next-line no-console
           console.log(`[qq-bot] 群 ${groupId} 图片识别：${desc.slice(0, 40)}`);
           effectiveText = `${effectiveText}\n（对方还发了一张图：${desc}）`;
+          // 固定搭配匹配：网络上有大量含义接近的回复 → 注入含义与常见回复
+          const memeNote = memeMatchNote(matchMemeImages(desc, memeEntries));
+          if (memeNote !== null) {
+            effectiveText = `${effectiveText}\n${memeNote}`;
+          }
         } else if (effectiveText.trim() === "") {
           // 图没识别出来且没有文字：静默，不给她制造“没收到”的反馈
           return;
