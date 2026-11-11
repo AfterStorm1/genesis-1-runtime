@@ -573,8 +573,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           console.log(`[qq-bot] 群 ${groupId} 图片识别：${desc.slice(0, 40)}`);
           effectiveText = `${effectiveText}\n（对方还发了一张图：${desc}）`;
         } else if (effectiveText.trim() === "") {
-          // 视觉不可用且无文字：至少告诉模型有张图（她可以按性格回应“看不太清”之类）
-          effectiveText = "（对方发了一张图，但这边没看清）";
+          // 图没识别出来且没有文字：静默，不给她制造“没收到”的反馈
+          return;
         }
       } else {
         awaitingImage.set(groupId, Date.now() + config.imageWindowMs);
