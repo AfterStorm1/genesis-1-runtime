@@ -112,7 +112,6 @@ export async function runBiliBot(): Promise<void> {
   );
 
   const chat = await createChatRuntime({
-    persona: undefined,
     historyDir: path.join(config.historyDir, `bili-${config.roomId}`),
     stream: false,
     tts: false,
