@@ -253,7 +253,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
 
   /** 回复发送：对老板/喜欢的人可用语音（TTS，短句），失败/不满足时落回文字 */
   const voiceLast = new Map<string, number>();
-  const sendReply = async (groupId: string, groupNumber: number, chat: ChatRuntime, flat: string, isTrusted: boolean): Promise<void> => {
+  const sendReply = async (groupId: string, groupNumber: number | undefined, chat: ChatRuntime, flat: string, isTrusted: boolean): Promise<void> => {
     const wantVoice =
       config.qqVoiceReply.enabled && isTrusted && flat.length <= 120 && (Date.now() - (voiceLast.get(groupId) ?? 0) >= config.qqVoiceReply.cooldownMs);
     if (wantVoice) {
