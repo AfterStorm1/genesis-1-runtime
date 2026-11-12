@@ -163,6 +163,7 @@ export async function handleOwnerCommand(
     baseHistoryDir: string;
     offenses: Map<string, Map<string, number>>;
     blacklists: Map<string, Set<string>>;
+    turnCounts: Map<string, number>;
   },
 ): Promise<void> {
   if (cmd === "reset" || cmd === "clear") {
@@ -178,6 +179,7 @@ export async function handleOwnerCommand(
     ctx.lastReplyAt.delete(groupId);
     ctx.offenses.delete(groupId);
     ctx.blacklists.delete(groupId);
+    ctx.turnCounts.delete(groupId);
     fs.rmSync(path.join(ctx.baseHistoryDir, `qq-${groupId}`), { recursive: true, force: true });
     await httpPost(
       ctx.config.httpBase,
@@ -229,6 +231,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
   const offenses = new Map<string, Map<string, number>>();
   /** 黑名单：群号 → QQ号集合（三次冒犯后不再互动） */
   const blacklists = new Map<string, Set<string>>();
+  /** 每群用户回合计数（长期记忆提炼节拍） */
+  const turnCounts = new Map<string, number>();
 
   /** 心情好时按冷却在句尾跟一个颜文字（宿主控制节奏，不滥用） */
   const withKaomoji = (groupId: string, chat: ChatRuntime, textReply: string): string => {
@@ -449,7 +453,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const cmd = parseOwnerCommand(text);
       if (cmd !== null) {
         enqueue(groupId, async () => {
-          await handleOwnerCommand(cmd, groupId, { config, runtimes, lastReplyAt, baseHistoryDir, offenses, blacklists });
+          await handleOwnerCommand(cmd, groupId, { config, runtimes, lastReplyAt, baseHistoryDir, offenses, blacklists, turnCounts });
         });
         return;
       }
@@ -517,6 +521,25 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const inputText = `[系统注记：${identityNote}${quoteNote}]\n${effectiveText}`;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
+      // —— 长期记忆提炼（每 N 个用户回合一次，与终端宿主一致；0 关闭）——
+      const summaryEvery = Number(process.env.QQ_SUMMARY_EVERY ?? 8) || 8;
+      if (summaryEvery > 0) {
+        const n = (turnCounts.get(groupId) ?? 0) + 1;
+        turnCounts.set(groupId, n);
+        if (n % summaryEvery === 0) {
+          try {
+            const recent = chat.history.list().slice(-24);
+            const { facts, feelings } = await chat.summarizer.summarize(recent);
+            for (const t of facts) chat.longTerm.add(t);
+            for (const f of feelings) chat.feelings.add(f);
+            // eslint-disable-next-line no-console
+            console.log(`[qq-bot] 群 ${groupId} 已提炼长期记忆：+${facts.length} 事实 +${feelings.length} 感受`);
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn(`[qq-bot] 群 ${groupId} 长期记忆提炼失败：${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
+      }
       const flat = withKaomoji(groupId, chat, reply.replace(/\s*\r?\n\s*/g, " ").trim()); // 群聊单行+颜文字
       for (const chunk of splitForSend(flat, config.maxReplyLen)) {
         await httpPost(config.httpBase, "/send_group_msg", {
