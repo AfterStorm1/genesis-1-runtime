@@ -23,6 +23,10 @@ export interface ChatEnvConfig {
   sttLang: string;
   extraSystem: string | undefined;
   temperature: number | undefined;
+  /** 重复惩罚（-2~2）：抑制复读式开头 */
+  frequencyPenalty: number | undefined;
+  /** 话题多样惩罚（-2~2） */
+  presencePenalty: number | undefined;
 }
 
 function num(v: string | undefined, fallback: number): number {
@@ -72,5 +76,7 @@ export function readChatEnv(): ChatEnvConfig {
     sttLang: process.env.CHAT_STT_LANG ?? "zh-CN",
     extraSystem: process.env.CHAT_EXTRA_SYSTEM?.trim() || undefined,
     temperature: numOrUndefined(process.env.CHAT_TEMPERATURE),
+    frequencyPenalty: numOrUndefined(process.env.CHAT_FREQ_PENALTY) ?? 0.3,
+    presencePenalty: numOrUndefined(process.env.CHAT_PRES_PENALTY) ?? 0.2,
   };
 }

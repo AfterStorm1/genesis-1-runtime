@@ -164,6 +164,8 @@ export async function createChatRuntime(opts?: ChatRuntimeOptions): Promise<Chat
       apiKey,
       extraSystemPrompt,
       temperature: env.temperature,
+      frequencyPenalty: env.frequencyPenalty,
+      presencePenalty: env.presencePenalty,
       quiet: streamOutput, // 流式模式下静音 llm.request 日志，避免串行干扰打字机输出
     }),
     memory: mem.memory, // 对话记忆走契约预留的 MemoryStore → recall 路径

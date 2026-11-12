@@ -21,8 +21,12 @@ export interface OpenAiCompatibleCognitionOptions {
   /** 在线服务必填；本地 Ollama 不填 */
   apiKey?: string;
   persona: PersonaCardV3;
-  /** 默认 0.7（小模型偏低更稳，避免答非所问） */
+  /** 默认 0.85（既有随性又不乱）；可经 CHAT_TEMPERATURE 覆盖 */
   temperature?: number;
+  /** 重复惩罚（-2~2）：抑制"好/不能"式复读；可经 CHAT_FREQ_PENALTY 覆盖 */
+  frequencyPenalty?: number;
+  /** 话题多样惩罚（-2~2）：可经 CHAT_PRES_PENALTY 覆盖 */
+  presencePenalty?: number;
   /** 默认 512 */
   maxTokens?: number;
   /** 追加到 system 提示词末尾（宿主扩展用，如世界书/额外规则） */
@@ -149,6 +153,9 @@ export interface ChatOnceOptions {
   messages: Array<{ role: string; content: string }>;
   temperature?: number;
   maxTokens?: number;
+  /** 重复惩罚（-2~2）：抑制"好/不能"式复读 */
+  frequencyPenalty?: number;
+  presencePenalty?: number;
 }
 
 /** 一次 OpenAI 兼容对话请求（适配器与摘要器共用），返回模型文本；HTTP 错误抛异常 */
@@ -162,8 +169,10 @@ export async function chatOnce(opts: ChatOnceOptions): Promise<string> {
     body: JSON.stringify({
       model: opts.model,
       messages: opts.messages,
-      temperature: opts.temperature ?? 0.7,
+      temperature: opts.temperature ?? 0.85,
       max_tokens: opts.maxTokens ?? 512,
+      ...(opts.frequencyPenalty !== undefined ? { frequency_penalty: opts.frequencyPenalty } : {}),
+      ...(opts.presencePenalty !== undefined ? { presence_penalty: opts.presencePenalty } : {}),
       stream: false,
     }),
   });
@@ -180,9 +189,11 @@ export function createOpenAiCompatibleCognition(
   const baseUrl = (opts.baseUrl ?? "http://localhost:11434").replace(/\/+$/, "");
   const model = opts.model ?? "qwen3:8b";
   const apiKey = opts.apiKey;
-  const temperature = opts.temperature ?? 0.7;
+  const temperature = opts.temperature ?? 0.85;
   const maxTokens = opts.maxTokens ?? 512;
   const extraSystemPrompt = opts.extraSystemPrompt;
+  const frequencyPenalty = opts.frequencyPenalty;
+  const presencePenalty = opts.presencePenalty;
   const quiet = opts.quiet === true;
   let logger: Logger | undefined;
 
@@ -198,7 +209,7 @@ export function createOpenAiCompatibleCognition(
       if (!quiet) logger?.info("llm.request", { model, baseUrl, turns: messages.length });
       let raw: string;
       try {
-        raw = await chatOnce({ baseUrl, model, apiKey, messages, temperature, maxTokens });
+        raw = await chatOnce({ baseUrl, model, apiKey, messages, temperature, maxTokens, frequencyPenalty, presencePenalty });
       } catch (err) {
         logger?.error("llm.error", { err: err instanceof Error ? err.message : String(err) });
         // 降级台词：保证会话不静默（骨架行为）
