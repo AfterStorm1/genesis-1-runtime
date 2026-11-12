@@ -10,11 +10,14 @@ import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
 import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whisper-engine";
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
+import { createCloudTts } from "../../adapters/tts/cloud-tts";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
 /** 图片识别（视觉模型，key 复用 SiliconFlow） */
 const imageDescriber = createImageDescriber();
+/** 云端 TTS（回复发语音用；音色经 TTS_CLOUD_VOICE 自定义） */
+const tts = createCloudTts();
 
 /** 冒犯词（观察区域判定；严重越界另有终止钩子） */
 export const OFFENSE_WORDS: readonly string[] = [
@@ -58,6 +61,8 @@ export interface QqBotConfig {
   imageWindowMs: number;
   /** 颜文字发射配置（心情好时句尾跟一个，宿主控制节奏） */
   kaomoji: KaomojiConfig;
+  /** 语音回复配置（对老板/喜欢的人用语音回复） */
+  qqVoiceReply: { enabled: boolean; cooldownMs: number };
   /** 单条回复最大长度（超出分条发送），默认 500 */
   maxReplyLen: number;
 }
@@ -98,6 +103,10 @@ export function readQqEnv(): QqBotConfig {
       enabled: (process.env.QQ_KAOMOJI ?? "1") !== "0",
       minIntensity: Number(process.env.QQ_KAOMOJI_MIN ?? 0.55) || 0.55,
       cooldownMs: Number(process.env.QQ_KAOMOJI_COOLDOWN_MS ?? 300_000) || 300_000,
+    },
+    qqVoiceReply: {
+      enabled: (process.env.QQ_VOICE_REPLY ?? "0") === "1",
+      cooldownMs: Number(process.env.QQ_VOICE_COOLDOWN_MS ?? 60_000) || 60_000,
     },
     maxReplyLen: Number(process.env.QQ_MAX_REPLY_LEN ?? 500) || 500,
   };
@@ -241,6 +250,38 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     kaomojiLast.set(groupId, Date.now());
     return `${textReply} ${k}`;
   };
+
+  /** 回复发送：对老板/喜欢的人可用语音（TTS，短句），失败/不满足时落回文字 */
+  const voiceLast = new Map<string, number>();
+  const sendReply = async (groupId: string, groupNumber: number, chat: ChatRuntime, flat: string, isTrusted: boolean): Promise<void> => {
+    const wantVoice =
+      config.qqVoiceReply.enabled && isTrusted && flat.length <= 120 && (Date.now() - (voiceLast.get(groupId) ?? 0) >= config.qqVoiceReply.cooldownMs);
+    if (wantVoice) {
+      const out = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}.mp3`);
+      const made = await tts.synthesizeToFile(flat, out);
+      if (made !== null) {
+        voiceLast.set(groupId, Date.now());
+        await httpPost(
+          config.httpBase,
+          "/send_group_msg",
+          { group_id: groupNumber, message: `[CQ:record,file=file:///${made.replace(/\\/g, "/")}]` },
+          config.token,
+        );
+        // eslint-disable-next-line no-console
+        console.log(`[qq-bot] 已语音回复群 ${groupId}：${flat.slice(0, 30)}`);
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.warn("[qq-bot] 语音合成失败，落回文字回复");
+    }
+    const final = withKaomoji(groupId, chat, flat); // 文字路径才加颜文字（语音读出来怪）
+    for (const chunk of splitForSend(final, config.maxReplyLen)) {
+      await httpPost(config.httpBase, "/send_group_msg", {
+        group_id: groupNumber,
+        message: chunk,
+      }, config.token);
+    }
+  };
   const baseHistoryDir = process.env.CHAT_HISTORY_DIR ?? path.join(process.cwd(), "data", "chat-history");
 
   const runtimeFor = (groupId: string): Promise<ChatRuntime> => {
@@ -339,13 +380,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           console.log(`[qq-bot] 群 ${groupId} 语音转写：${heard}`);
           const { text: reply } = await sendUserMessage(chat, heard);
           if (reply === null || reply === "") return;
-          const flat = withKaomoji(groupId, chat, reply.replace(/\s*\r?\n\s*/g, " ").trim()); // 群聊单行+颜文字
-          for (const chunk of splitForSend(flat, config.maxReplyLen)) {
-            await httpPost(config.httpBase, "/send_group_msg", {
-              group_id: ev.group_id,
-              message: chunk,
-            }, config.token);
-          }
+          const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
+          await sendReply(groupId, ev.group_id, chat, flat, isOwner || isFriend);
           // eslint-disable-next-line no-console
           console.log(`[qq-bot] 已回复群 ${groupId}（语音）：${reply.slice(0, 40)}${reply.length > 40 ? "…" : ""}`);
         } catch (err) {
@@ -557,13 +593,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           }
         }
       }
-      const flat = withKaomoji(groupId, chat, reply.replace(/\s*\r?\n\s*/g, " ").trim()); // 群聊单行+颜文字
-      for (const chunk of splitForSend(flat, config.maxReplyLen)) {
-        await httpPost(config.httpBase, "/send_group_msg", {
-          group_id: ev.group_id,
-          message: chunk,
-        }, config.token);
-      }
+      const flat = reply.replace(/\s*\r?\n\s*/g, " ").trim(); // 群聊单行
+      await sendReply(groupId, ev.group_id, chat, flat, isOwner || isFriend);
       // eslint-disable-next-line no-console
       console.log(`[qq-bot] 已回复群 ${groupId}：${reply.slice(0, 40)}${reply.length > 40 ? "…" : ""}`);
     });
