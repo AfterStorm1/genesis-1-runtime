@@ -499,7 +499,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       } else {
         awaitingImage.set(groupId, Date.now() + config.imageWindowMs);
       }
-      // 身份由宿主判定注入，正反都标清：老板 / 喜欢的人（指名）/ 普通群友（不给模型脑补空间）
+      // 身份由宿主判定注入，用轻量自然标记（系统注记腔会传染机器味）：
+      // 老板/喜欢的人带说话人括号，普通群友不加任何标记，引用单独轻提示
       const friendName = config.friendNames.get(senderId);
       let friendGreet = false;
       if (isFriend) {
@@ -511,14 +512,17 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           friendGreet = true;
         }
       }
-      const observeNote = offenseCount > 0 ? `；这个人在观察区域（已冒犯 ${offenseCount} 次）` : "";
-      const identityNote = isOwner
-        ? "这是老板的消息"
+      const observeNote = offenseCount > 0 ? `（这个人在观察区域，已冒犯 ${offenseCount} 次）` : "";
+      const speaker = isOwner
+        ? "老板"
         : isFriend
-          ? `这是你喜欢的人${friendName !== undefined ? `（${friendName}）` : ""}的消息${friendGreet ? "，他今天第一次出现，主动友好地打个招呼，语气轻快一点" : ""}`
-          : `这是普通群友的消息${observeNote}`;
-      const quoteNote = quotedMe && !isOwner && !isFriend ? "；有人引用了你说过的话，回应一下" : "";
-      const inputText = `[系统注记：${identityNote}${quoteNote}]\n${effectiveText}`;
+          ? `${friendName ?? "你喜欢的人"}${friendGreet ? "（今天第一次出现，主动友好打个招呼）" : ""}`
+          : null;
+      const quoteNote = quotedMe && !isOwner && !isFriend ? "（有人引用了你说过的话）" : "";
+      const inputText =
+        speaker !== null
+          ? `（${speaker}说）${effectiveText}`
+          : `${observeNote}${quoteNote}${effectiveText}`;
       const { text: reply } = await sendUserMessage(chat, inputText);
       if (reply === null || reply === "") return;
       // —— 长期记忆提炼（每 N 个用户回合一次，与终端宿主一致；0 关闭）——
