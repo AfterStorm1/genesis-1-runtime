@@ -17,3 +17,6 @@ rem ---- optional: QQ group bot boss (comma-separated QQ numbers; can use !reset
 rem set "QQ_OWNER_IDS=your-qq-number"
 rem ---- optional: QQ group bot close friends (recognized, no boss commands) ----
 rem set "QQ_FRIEND_IDS=friend-qq-number"
+rem ---- optional: bilibili live danmaku bot ----
+rem set "BILI_ROOM_ID=????"
+rem set "BILI_COOKIE=???????Cookie(?bili_jct????????????)"
