@@ -528,10 +528,14 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         turnCounts.set(groupId, n);
         if (n % summaryEvery === 0) {
           try {
-            const recent = chat.history.list().slice(-24);
+            const recent = chat.history
+              .list()
+              .slice(-12)
+              .map((i) => `${i.role === "user" ? "用户" : "蕙"}：${i.content}`)
+              .join("\n");
             const { facts, feelings } = await chat.summarizer.summarize(recent);
             for (const t of facts) chat.longTerm.add(t);
-            for (const f of feelings) chat.feelings.add(f);
+            for (const f of feelings) chat.feelings.add(f.text, f.emotion);
             // eslint-disable-next-line no-console
             console.log(`[qq-bot] 群 ${groupId} 已提炼长期记忆：+${facts.length} 事实 +${feelings.length} 感受`);
           } catch (err) {
