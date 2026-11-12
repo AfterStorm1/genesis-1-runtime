@@ -286,9 +286,22 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     // eslint-disable-next-line no-console
     console.log(`[qq-bot] 收到 群${groupId}: ${rawPreview}`);
 
-    // —— 语音消息：群里发语音 → 定位文件（path 优先，file 相对名在 NapCat 目录内搜索）→ 转写 → 按文本回复 ——
+    const senderId = String(ev.user_id ?? "");
+    const isOwner = config.ownerIds.has(senderId);
+    const isFriend = config.friendIds.has(senderId);
+
+    // —— 语音消息：老板/喜欢的人随时可触发；普通群友需在「触发聊天后的窗口」内 ——
     const rec = extractCqRecord(ev);
     if (rec !== null) {
+      if (!isOwner && !isFriend) {
+        const due = awaitingImage.get(groupId) ?? 0;
+        if (Date.now() > due) {
+          // eslint-disable-next-line no-console
+          console.log(`[qq-bot] 群 ${groupId} 忽略语音：需要先 @机器人 或提“${config.trigger}”再发语音`);
+          return;
+        }
+        awaitingImage.delete(groupId); // 一次性：窗口内的下一段语音
+      }
       enqueue(groupId, async () => {
         const now = Date.now();
         const last = lastReplyAt.get(groupId) ?? 0;
@@ -342,10 +355,6 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       });
       return;
     }
-
-    const senderId = String(ev.user_id ?? "");
-    const isOwner = config.ownerIds.has(senderId);
-    const isFriend = config.friendIds.has(senderId);
 
     // —— 冒犯分级（观察区域 → 三次拉黑；不适用于老板/喜欢的人）——
     let offenseCount = 0;
