@@ -1,6 +1,6 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-11T20:00:07.871Z（北京时间 2026/11/12 04:00:07）
+> 自动生成时间：2026-11-12T20:00:08.135Z（北京时间 2026/11/13 04:00:08）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
@@ -13,14 +13,14 @@
 
 ### 最近提交（git log -8）
 
+`bbf1cb6 fix: QQ host now distills long-term memory every N turns (matches terminal host API)`
+`2043317 fix: QQ host now distills long-term memory every N turns (was missing vs terminal host)`
+`89cb929 chore: refresh HANDOVER (daily)`
 `b17c1e0 fix: friend display name 绿/苔绿Tars (config + rules synced)`
 `cc71156 overwrite permanent layer: new persona (home/first-mes), new rules (老板/喜欢的人/星见小鹿/观察-黑名单/b站生活), remove meme-image pairing, friend config v3`
 `53946e9 content: reorganize rules — narrative order (world→life→identity→speech), tech spec moved to appendix`
 `55a2916 content: pre-reply internal check — personal memories only on trigger+motive, carried as aside, never itinerary-led`
 `4c01cf4 fix: remove stray tmpdir rm line from test`
-`44e5b66 feat: meme-image fixed-pairing dictionary — vision description matches curated meme meanings/replies`
-`6d12527 fix: misidentifying strangers as friends — explicit stranger identity note + no-confusion rules`
-`f2f48cf feat: mood-driven kaomoji in group chat — happy + cooldown gate, host-controlled pacing`
 
 ### 本地 Ollama 模型
 
