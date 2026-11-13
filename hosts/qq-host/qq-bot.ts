@@ -10,14 +10,14 @@ import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
 import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whisper-engine";
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
-import { createCloudTts, emotionHint } from "../../adapters/tts/cloud-tts";
+import { createTtsEngine } from "../../adapters/tts/edge-tts";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
 /** 图片识别（视觉模型，key 复用 SiliconFlow） */
 const imageDescriber = createImageDescriber();
-/** 云端 TTS（回复发语音用；音色经 TTS_CLOUD_VOICE 自定义） */
-const tts = createCloudTts();
+/** TTS 引擎（Edge 免费首选 → SiliconFlow 云端兜底；音色经 TTS_EDGE_VOICE / TTS_CLOUD_VOICE 自定义） */
+const tts = createTtsEngine();
 
 /** 冒犯词（观察区域判定；严重越界另有终止钩子） */
 export const OFFENSE_WORDS: readonly string[] = [
@@ -258,9 +258,12 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       config.qqVoiceReply.enabled && isTrusted && flat.length <= 120 && (Date.now() - (voiceLast.get(groupId) ?? 0) >= config.qqVoiceReply.cooldownMs);
     if (wantVoice) {
       const out = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}.mp3`);
-      // 语音跟着她的心情走：情绪状态 → TTS 语气指令
-      const hint = chat.emotion !== undefined ? emotionHint(chat.emotion.state().emotion) : undefined;
-      const made = await tts.synthesizeToFile(flat, out, hint !== undefined ? { emotionHint: hint } : undefined);
+      // 语音跟着她的心情走：情绪状态 → 语气/语速（Edge 用语速模拟，云端用语气指令）
+      const made = await tts.synthesizeToFile(
+        flat,
+        out,
+        chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
+      );
       if (made !== null) {
         voiceLast.set(groupId, Date.now());
         await httpPost(
