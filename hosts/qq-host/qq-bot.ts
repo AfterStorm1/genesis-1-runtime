@@ -253,12 +253,14 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
 
   /** 回复发送：对老板/喜欢的人可用语音（TTS，短句），失败/不满足时落回文字 */
   const voiceLast = new Map<string, number>();
-  /** 语音前剥掉命令样内容（set/rem 行、TTS_ 配置字样），防止把配置命令念出来 */
+  /** 语音前剥掉命令样内容与动作描述（set/rem 行、TTS_ 字样、（动作）括号），防止念出来 */
   const spokenSafe = (text: string): string =>
     text
       .split(/\n/)
       .filter((l) => !/^\s*(set|rem)\s/i.test(l))
       .join(" ")
+      .replace(/（[^）]*）/g, "")
+      .replace(/\([^)]*\)/g, "")
       .replace(/TTS_[A-Z_]+/g, "")
       .replace(/\s+/g, " ")
       .trim();
@@ -266,10 +268,22 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     const wantVoice =
       config.qqVoiceReply.enabled && isTrusted && flat.length <= 120 && (Date.now() - (voiceLast.get(groupId) ?? 0) >= config.qqVoiceReply.cooldownMs);
     if (wantVoice) {
+      const spoken = spokenSafe(flat);
+      if (spoken === "") {
+        // 剥完只剩动作描述：不发语音（动作本来就不该念），落回文字
+        const finalText = withKaomoji(groupId, chat, flat);
+        for (const chunk of splitForSend(finalText, config.maxReplyLen)) {
+          await httpPost(config.httpBase, "/send_group_msg", {
+            group_id: groupNumber,
+            message: chunk,
+          }, config.token);
+        }
+        return;
+      }
       const out = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}.mp3`);
       // 语音跟着她的心情走：情绪状态 → 语气/语速（Edge 用语速模拟，云端用语气指令）
       const made = await tts.synthesizeToFile(
-        spokenSafe(flat),
+        spoken,
         out,
         chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
       );
