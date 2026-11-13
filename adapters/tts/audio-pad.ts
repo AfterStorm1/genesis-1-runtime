@@ -88,7 +88,7 @@ export function concatAudio(files: string[], gapSeconds: number): Promise<string
     });
     p.on("exit", (code) => {
       if (code === 0) {
-        const m = stdout.match(/ok\s+(.+)$/m);
+        const m = stdout.match(/ok\s+(\S+)/);
         resolve(m?.[1]?.trim() ?? out);
       } else {
         // eslint-disable-next-line no-console

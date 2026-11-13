@@ -15,12 +15,25 @@ export interface EdgeTtsConfig {
   python: string;
 }
 
+/** cmd 批处理可能吞掉行尾的 %（"-5%" 变成 "-5"）：归一化补全（导出供测试） */
+export function normalizeRate(v: string): string {
+  if (/^[+-]\d+%$/.test(v)) return v;
+  if (/^[+-]\d+$/.test(v)) return `${v}%`;
+  return "+0%";
+}
+
+export function normalizePitch(v: string): string {
+  if (/^[+-]\d+Hz$/.test(v)) return v;
+  if (/^[+-]\d+$/.test(v)) return `${v}Hz`;
+  return "+0Hz";
+}
+
 export function resolveEdgeTtsConfig(): EdgeTtsConfig {
   return {
     voice: process.env.TTS_EDGE_VOICE ?? "zh-CN-XiaoxiaoNeural",
-    // 声线基调：低音区（pitch -5Hz，晓晓底子薄所以只降不厚）、偏慢（rate -12%）——「三无冷淡少女低音」
-    rate: process.env.TTS_EDGE_RATE ?? "-12%",
-    pitch: process.env.TTS_EDGE_PITCH ?? "-5Hz",
+    // 声线基调：低音区（pitch -3Hz，晓晓底子薄所以只降不厚）、偏慢（rate -12%）——「三无冷淡少女低音」
+    rate: normalizeRate(process.env.TTS_EDGE_RATE ?? "-12%"),
+    pitch: normalizePitch(process.env.TTS_EDGE_PITCH ?? "-3Hz"),
     python:
       process.env.TTS_PYTHON ?? path.join(process.cwd(), "tools", "whisper-py", "Scripts", "python.exe"),
   };
