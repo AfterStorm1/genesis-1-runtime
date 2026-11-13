@@ -106,6 +106,8 @@ if ($usePy) {
   & (Join-Path $pyVenv "Scripts\python.exe") -m pip install --quiet faster-whisper -i https://pypi.tuna.tsinghua.edu.cn/simple
   # QQ 语音 silk v3 解码器（#!SILK_V3 → pcm）
   & (Join-Path $pyVenv "Scripts\python.exe") -m pip install --quiet pilk -i https://pypi.tuna.tsinghua.edu.cn/simple
+  # 微软 Edge TTS（免费顶级中文语音，回复发语音用）
+  & (Join-Path $pyVenv "Scripts\python.exe") -m pip install --quiet edge-tts -i https://pypi.tuna.tsinghua.edu.cn/simple
   # 兼容性：whisper-stt.py 内置 av.open 垫片，任意 PyAV 版本均可（无需固定版本）
   & (Join-Path $pyVenv "Scripts\python.exe") -m pip install --quiet sounddevice numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
   Write-Host "  Python 后端就位（首次转写会自动经 hf-mirror 下载模型）"
