@@ -17,9 +17,8 @@ import { audioDuration, concatAudio, padSilenceFile, timeStretchFile } from "../
 const sttEngine = createWhisperCppEngine();
 /** 图片识别（视觉模型，key 复用 SiliconFlow） */
 const imageDescriber = createImageDescriber();
-/** TTS 引擎（云端克隆音色首选；晓晓 Edge 兜底，防云端截断） */
+/** TTS 引擎（仅云端克隆音色；微软语音已移除） */
 const tts = createTtsEngine();
-const edgeFallbackTts = createTtsEngine("edge");
 
 /** 冒犯词（观察区域判定；严重越界另有终止钩子） */
 export const OFFENSE_WORDS: readonly string[] = [
@@ -319,12 +318,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
             }
           }
         }
-        if (r === null) {
-          // 云端不可用/持续截断 → 整句晓晓兜底
-          const fe = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-e.mp3`);
-          r = await edgeFallbackTts.synthesizeToFile(text, fe, undefined);
-        }
-        return r;
+        return r; // 失败 → null → 整条落回文字（不再有第三方语音兜底）
       };
       const parts: string[] = [];
       for (const s of sentences) {
@@ -333,8 +327,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
       let sendFile: string | null = null;
       if (parts.length === 0) {
-        const fe = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-e.mp3`);
-        sendFile = await edgeFallbackTts.synthesizeToFile(forTts(spoken), fe, undefined);
+        sendFile = null; // 全部失败 → 文字
       } else if (parts.length === 1) {
         sendFile = parts[0]!;
       } else {

@@ -58,100 +58,19 @@ export interface TtsEngine {
   synthesizeToFile(text: string, outPath: string, opts?: { emotion?: string }): Promise<string | null>;
 }
 
-export function createTtsEngine(force?: "edge" | "cloud" | "off"): TtsEngine {
-  const edge = resolveEdgeTtsConfig();
+export function createTtsEngine(): TtsEngine {
   const cloud = createCloudTts();
-  const forced = force ?? process.env.TTS_ENGINE ?? "edge"; // edge | cloud | off
-  let ready: Promise<boolean> | null = null;
-  let logged = false;
-
-  if (forced === "cloud") {
-    if (!logged) {
-      logged = true;
-      // eslint-disable-next-line no-console
-      console.log("[tts] TTS_ENGINE=cloud：直走云端（GPT-SoVITS/CosyVoice + 克隆音色）");
-    }
-    return {
-      async synthesizeToFile(text, outPath, opts) {
-        return cloud.synthesizeToFile(text, outPath, opts);
-      },
-    };
-  }
-  if (forced === "off") {
+  // 语音引擎：只走云端（克隆音色/CosyVoice）。微软 Edge 已按需求移除，不再作为任何兜底。
+  // TTS_ENGINE=off 可整体关闭语音合成（回复自动落回文字）。
+  if ((process.env.TTS_ENGINE ?? "cloud") === "off") {
     return {
       async synthesizeToFile() {
         return null;
       },
     };
   }
-
-  const ensureReady = (): Promise<boolean> => {
-    if (ready === null) {
-      ready = new Promise((resolve) => {
-        const p = spawn(edge.python, ["-c", "import edge_tts"], { stdio: "ignore" });
-        p.on("exit", (code) => resolve(code === 0));
-        p.on("error", () => resolve(false));
-      });
-    }
-    return ready;
-  };
-
-  const runEdge = (textFile: string, out: string, rate: string, pitch: string, voice: string): Promise<void> =>
-    new Promise((resolve, reject) => {
-      const script = path.join(process.cwd(), "scripts", "tts-edge.py");
-      const p = spawn(edge.python, [script, textFile, out, voice, rate, pitch], {
-        stdio: ["ignore", "ignore", "pipe"],
-      });
-      let err = "";
-      p.stderr?.on("data", (d: Buffer) => {
-        err += d.toString("utf8");
-      });
-      p.on("exit", (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`edge_tts_exit_${code ?? "?"}: ${err.trim().split(/\r?\n/).slice(-6).join(" | ").slice(-600)}`));
-      });
-      p.on("error", (e) => reject(e));
-    });
-
   return {
-    async synthesizeToFile(text: string, outPath: string, opts?: { emotion?: string }): Promise<string | null> {
-      if (await ensureReady()) {
-        if (!logged) {
-          logged = true;
-          // eslint-disable-next-line no-console
-          console.log("[tts] Edge 引擎就绪（微软免费语音）");
-        }
-        try {
-          const textFile = path.join(runtimeTmpDir(), `tts-text-${Date.now()}.txt`);
-          fs.writeFileSync(textFile, text, "utf8");
-          const rate = opts?.emotion !== undefined ? emotionRate(opts.emotion) : edge.rate;
-          try {
-            await runEdge(textFile, outPath, rate, edge.pitch, edge.voice);
-          } catch (firstErr) {
-            if (edge.pitch !== "+0Hz") {
-              // 音高参数被拒时自动重试默认音高（NoAudioReceived 常见于此）
-              // eslint-disable-next-line no-console
-              console.warn(`[tts] Edge 带音高失败，重试默认音高：${firstErr instanceof Error ? firstErr.message.slice(0, 120) : ""}`);
-              await runEdge(textFile, outPath, rate, "+0Hz", edge.voice);
-            } else if (edge.voice !== "zh-CN-XiaoxiaoNeural") {
-              // 音色名服务端不认（新一批音色如晓涵/晓梦不可用）：兜底晓晓
-              // eslint-disable-next-line no-console
-              console.warn("[tts] 配置音色不可用，兜底晓晓（zh-CN-XiaoxiaoNeural）");
-              await runEdge(textFile, outPath, rate, "+0Hz", "zh-CN-XiaoxiaoNeural");
-            } else {
-              throw firstErr;
-            }
-          }
-          return outPath;
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.warn(`[tts] Edge 合成失败，落回云端：${err instanceof Error ? err.message : String(err)}`);
-        }
-      } else if (!logged) {
-        logged = true;
-        // eslint-disable-next-line no-console
-        console.warn("[tts] Edge 不可用，使用云端兜底。装 Edge：tools\\whisper-py\\Scripts\\python.exe -m pip install edge-tts -i https://pypi.tuna.tsinghua.edu.cn/simple");
-      }
+    async synthesizeToFile(text, outPath, opts) {
       return cloud.synthesizeToFile(text, outPath, opts);
     },
   };
