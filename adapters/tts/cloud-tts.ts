@@ -101,7 +101,16 @@ export function createCloudTts(): CloudTts {
       }
     },
     async uploadVoice(filePath: string, customName: string, refText: string): Promise<string | null> {
-      if (config.key === undefined) return null;
+      if (config.key === undefined) {
+        // eslint-disable-next-line no-console
+        console.warn("[tts] 未配置 key（TTS_CLOUD_KEY/STT_CLOUD_KEY），无法克隆");
+        return null;
+      }
+      if (!fs.existsSync(filePath)) {
+        // eslint-disable-next-line no-console
+        console.warn(`[tts] 音频文件不存在：${filePath}`);
+        return null;
+      }
       try {
         const form = new FormData();
         form.append("model", config.model);
@@ -116,7 +125,7 @@ export function createCloudTts(): CloudTts {
         if (!res.ok) {
           const body = await res.text().catch(() => "");
           // eslint-disable-next-line no-console
-          console.warn(`[tts] 音色克隆失败 http_${res.status}: ${body.slice(0, 160)}`);
+          console.warn(`[tts] 音色克隆失败 http_${res.status}: ${body.slice(0, 300)}`);
           return null;
         }
         const data = (await res.json()) as { uri?: string };

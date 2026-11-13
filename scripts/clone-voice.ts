@@ -17,6 +17,8 @@ async function main(): Promise<void> {
     if (fs.existsSync(refFile)) refText = fs.readFileSync(refFile, "utf8").trim();
   }
   const tts = createCloudTts();
+  console.log("[clone-voice] 文件大小：", fs.existsSync(filePath) ? `${fs.statSync(filePath).size} bytes` : "不存在！");
+  console.log("[clone-voice] 参考文本长度：", refText.length, "字");
   const uri = await tts.uploadVoice(filePath, customName, refText);
   if (uri !== null) {
     const outFile = path.join(process.cwd(), "data", "tmp", "voice-uri.txt");
