@@ -74,7 +74,7 @@ export function createTtsEngine(): TtsEngine {
       });
       p.on("exit", (code) => {
         if (code === 0) resolve();
-        else reject(new Error(`edge_tts_exit_${code ?? "?"}: ${err.slice(0, 160)}`));
+        else reject(new Error(`edge_tts_exit_${code ?? "?"}: ${err.trim().split(/\r?\n/).slice(-6).join(" | ").slice(-600)}`));
       });
       p.on("error", (e) => reject(e));
     });
