@@ -70,30 +70,37 @@ export function createCloudTts(): CloudTts {
       try {
         // 注意：情绪指令前缀在部分模型上会被当成正文念出来——云端路径不再加指令，只合成纯文本
         const input = text;
-        const res = await fetch(`${config.baseUrl}/audio/speech`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${config.key}`,
-          },
-          body: JSON.stringify({
-            model: config.model,
-            voice: config.voice,
-            input,
-            response_format: "mp3",
-            speed: opts?.speed ?? config.speed,
-            gain: opts?.gain ?? config.gain,
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.text().catch(() => "");
-          // eslint-disable-next-line no-console
-          console.warn(`[tts] 合成失败 http_${res.status}: ${body.slice(0, 160)}`);
-          return null;
+        let lastBody = "";
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const res = await fetch(`${config.baseUrl}/audio/speech`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${config.key}`,
+            },
+            body: JSON.stringify({
+              model: config.model,
+              voice: config.voice,
+              input,
+              response_format: "mp3",
+              speed: opts?.speed ?? config.speed,
+              gain: opts?.gain ?? config.gain,
+            }),
+          });
+          if (res.ok) {
+            const buf = Buffer.from(await res.arrayBuffer());
+            fs.writeFileSync(outPath, buf);
+            return outPath;
+          }
+          lastBody = await res.text().catch(() => "");
+          if (attempt === 1) {
+            // 50507 类瞬时错误：稍等重试一次
+            await new Promise((r) => setTimeout(r, 800));
+          }
         }
-        const buf = Buffer.from(await res.arrayBuffer());
-        fs.writeFileSync(outPath, buf);
-        return outPath;
+        // eslint-disable-next-line no-console
+        console.warn(`[tts] 合成失败 http_500: ${lastBody.slice(0, 200)}`);
+        return null;
       } catch (err) {
         // eslint-disable-next-line no-console
         console.warn(`[tts] 合成异常：${err instanceof Error ? err.message : String(err)}`);
