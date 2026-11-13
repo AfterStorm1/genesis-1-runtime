@@ -662,14 +662,15 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         /* 忽略非 JSON 帧 */
       }
     });
-    ws.addEventListener("close", () => {
+    ws.addEventListener("close", (ev) => {
       if (closed) return;
       // eslint-disable-next-line no-console
-      console.log("[qq-bot] 连接断开，5 秒后重连…");
+      console.log(`[qq-bot] 连接断开（code=${ev.code} reason=${ev.reason || "无"}），5 秒后重连…`);
       setTimeout(connect, 5_000);
     });
-    ws.addEventListener("error", () => {
-      /* close 会随后触发重连 */
+    ws.addEventListener("error", (ev) => {
+      // eslint-disable-next-line no-console
+      console.warn(`[qq-bot] WS 错误：${ev.message ?? String(ev)}`);
     });
   };
 
