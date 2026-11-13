@@ -10,7 +10,7 @@ import { createChatRuntime, sendUserMessage } from "../chat-host/chat-runtime";
 import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whisper-engine";
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
-import { createCloudTts } from "../../adapters/tts/cloud-tts";
+import { createCloudTts, emotionHint } from "../../adapters/tts/cloud-tts";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
@@ -258,7 +258,9 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       config.qqVoiceReply.enabled && isTrusted && flat.length <= 120 && (Date.now() - (voiceLast.get(groupId) ?? 0) >= config.qqVoiceReply.cooldownMs);
     if (wantVoice) {
       const out = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}.mp3`);
-      const made = await tts.synthesizeToFile(flat, out);
+      // 语音跟着她的心情走：情绪状态 → TTS 语气指令
+      const hint = chat.emotion !== undefined ? emotionHint(chat.emotion.state().emotion) : undefined;
+      const made = await tts.synthesizeToFile(flat, out, hint !== undefined ? { emotionHint: hint } : undefined);
       if (made !== null) {
         voiceLast.set(groupId, Date.now());
         await httpPost(
