@@ -54,17 +54,17 @@ export interface CloudTts {
   uploadVoice(filePath: string, customName: string, refText: string): Promise<string | null>;
 }
 
-/** 情绪 → 云端语速（情绪指令会被念出来，改用速度表达情感）（导出供测试） */
+/** 情绪 → 云端语速（情绪指令会被念出来，改用速度表达情感；克隆音色对变速敏感，幅度收敛）（导出供测试） */
 export function emotionSpeed(emotion: string): number | undefined {
   switch (emotion) {
     case "happy":
       return 1.0; // 轻快一点
     case "sad":
-      return 0.8; // 明显放缓
+      return 0.85; // 放缓
     case "angry":
-      return 0.95;
+      return 1.0;
     case "calm":
-      return 0.88; // 平静偏慢
+      return 0.95; // 平静略慢（避免小幅度变速引起电音）
     default:
       return undefined;
   }
