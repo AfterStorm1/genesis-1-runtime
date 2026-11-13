@@ -11,7 +11,7 @@ import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whispe
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
 import { createTtsEngine } from "../../adapters/tts/edge-tts";
-import { padSilenceFile } from "../../adapters/tts/audio-pad";
+import { audioDuration, padSilenceFile } from "../../adapters/tts/audio-pad";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
@@ -262,10 +262,10 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         return last === "？" || last === "?" || last === "！" || last === "!" || last === "…" ? s : `${s}。`;
       })
       .join("");
-  /** 偶尔开头打个顿（“嗯……”）——一点点不完美更像真人；QQ_HESITATION_RATE 可调，0 关闭 */
+  /** 偶尔开头打个顿（“嗯，”）——一点点不完美更像真人；QQ_HESITATION_RATE 可调，0 关闭 */
   const withHesitation = (spoken: string): string => {
     const rate = Number(process.env.QQ_HESITATION_RATE ?? 0.12);
-    if (rate > 0 && spoken.length >= 6 && Math.random() < rate) return `嗯……${spoken}`;
+    if (rate > 0 && spoken.length >= 6 && Math.random() < rate) return `嗯，${spoken}`;
     return spoken;
   };
 
@@ -306,9 +306,21 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
       );
       if (made !== null) {
+        // 时长守卫：合成结果异常短（如只念出"嗯"）→ 用干净文本重试一次
+        let sendFile = made;
+        const dur = await audioDuration(made);
+        if ((dur !== null && dur < 1.2 && spoken.length >= 8) || dur === null) {
+          const out2 = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-r.mp3`);
+          const retry = await tts.synthesizeToFile(
+            forTts(spoken),
+            out2,
+            chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
+          );
+          if (retry !== null) sendFile = retry;
+        }
         // 末尾垫 0.5 秒静音：防 QQ 播放器把尾音截掉
-        const padded = await padSilenceFile(made, 0.5);
-        const sendFile = padded ?? made;
+        const padded = await padSilenceFile(sendFile, 0.5);
+        sendFile = padded ?? sendFile;
         voiceLast.set(groupId, Date.now());
         await httpPost(
           config.httpBase,

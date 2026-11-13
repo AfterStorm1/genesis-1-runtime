@@ -21,6 +21,7 @@ def main() -> None:
         for rf in res.resample(None):
             chunks.append(rf.to_ndarray())
     pcm = np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.int16)
+    pcm = np.ravel(pcm)
     pad = np.zeros(int(rate * sec), dtype=np.int16)
     out_pcm = np.concatenate([pcm, pad])
     try:
