@@ -10,3 +10,5 @@ data/
 *.log.tmp
 *.lnk
 test-voice.wav
+__pycache__/
+*.pyc

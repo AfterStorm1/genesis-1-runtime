@@ -87,7 +87,7 @@ export function createCloudTts(): CloudTts {
         // 注意：情绪指令前缀在部分模型上会被当成正文念出来——云端路径不再加指令，只合成纯文本
         const input = text;
         let lastBody = "";
-        for (let attempt = 1; attempt <= 2; attempt++) {
+        for (let attempt = 1; attempt <= 3; attempt++) {
           const res = await fetch(`${config.baseUrl}/audio/speech`, {
             method: "POST",
             headers: {
@@ -105,17 +105,24 @@ export function createCloudTts(): CloudTts {
           });
           if (res.ok) {
             const buf = Buffer.from(await res.arrayBuffer());
+            // 200 + 空 body / 几百字节的“空气mp3”是这个接口常见的坏响应：
+            // 写下去就是 0 字节或纯静音文件，后面会在质检里被判死，不如直接重试
+            if (buf.length < 1024) {
+              lastBody = `empty body (${buf.length}B)`;
+              if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));
+              continue;
+            }
             fs.writeFileSync(outPath, buf);
             return outPath;
           }
           lastBody = await res.text().catch(() => "");
-          if (attempt === 1) {
-            // 50507 类瞬时错误：稍等重试一次
+          if (attempt < 3) {
+            // 50507 类瞬时错误：稍等重试
             await new Promise((r) => setTimeout(r, 800));
           }
         }
         // eslint-disable-next-line no-console
-        console.warn(`[tts] 合成失败 http_500: ${lastBody.slice(0, 200)}`);
+        console.warn(`[tts] 合成失败（重试用尽）：${lastBody.slice(0, 200)}`);
         return null;
       } catch (err) {
         // eslint-disable-next-line no-console

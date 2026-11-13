@@ -11,7 +11,8 @@ import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whispe
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
 import { createTtsEngine } from "../../adapters/tts/edge-tts";
-import { audioDuration, concatAudio, padSilenceFile, timeStretchFile } from "../../adapters/tts/audio-pad";
+import { concatAudio, inspectAudio, padSilenceFile, timeStretchFile } from "../../adapters/tts/audio-pad";
+import type { AudioStat } from "../../adapters/tts/audio-pad";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
@@ -298,68 +299,124 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         }
         return;
       }
-      // —— 逐句合成管线：每句独立质检（防截断），拼接时插入固定停顿（断句节奏可控）——
+      // —— 逐句合成管线：每句独立质检（防截断/防静音），全部合格才发语音 ——
+      // 硬规则：任何一句拿不到合格产物 → 整条落回文字，绝不发缺头少尾的半条语音。
       const spokenWithHes = withHesitation(forTts(spoken)); // 打顿落在第一句
       const sentences = sentencesForTts(spokenWithHes);
-      const synthOne = async (text: string): Promise<string | null> => {
-        const f = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-${Math.floor(Math.random() * 1e6)}.mp3`);
-        let r = await tts.synthesizeToFile(text, f, undefined);
-        if (r !== null) {
-          const d = await audioDuration(r);
-          if ((d !== null && d < 0.8 && text.length >= 4) || d === null) {
-            const f2 = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-r.mp3`);
-            const r2 = await tts.synthesizeToFile(text, f2, undefined);
-            if (r2 !== null) {
-              // 重试结果也要二次质检（服务器可能吐损坏 mp3）
-              const d2 = await audioDuration(r2);
-              r = d2 !== null && d2 >= 0.8 ? r2 : null;
-            } else {
-              r = null;
-            }
-          }
-        }
-        return r; // 失败 → null → 整条落回文字（不再有第三方语音兜底）
+      /** 环境变量读数值：0 是合法值（比如关掉垫静音），不能用 `|| 默认值` */
+      const envNum = (name: string, def: number): number => {
+        const raw = process.env[name];
+        if (raw === undefined || raw.trim() === "") return def;
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : def;
       };
-      const parts: string[] = [];
+      /** 质检门槛：字数越多，要求的最低有效语音越长（防“只合成了一两个字”） */
+      const minVoiced = (text: string): number =>
+        Math.max(0.35, text.replace(/[，。！？、…,.!?\s]/g, "").length * 0.16);
+      type SynthPick = { file: string; stat: AudioStat };
+      const synthOne = async (text: string): Promise<SynthPick | null> => {
+        const tries = Math.max(1, Math.round(envNum("QQ_TTS_TRIES", 3)));
+        const need = minVoiced(text);
+        // 变体：①原句 ②前补逗号（有的模型会把起句的音吞掉） ③语速轻调，换个采样碰运气
+        const variants: { label: string; text: string; speed?: number }[] = [
+          { label: "原句", text },
+          { label: "前补逗号", text: `，${text}` },
+          { label: "语速0.95", text, speed: 0.95 },
+          { label: "前补逗号+0.95", text: `，${text}`, speed: 0.95 },
+        ];
+        const picks: { pick: SynthPick; score: number }[] = [];
+        for (let i = 0; i < Math.min(tries, variants.length); i++) {
+          const v = variants[i]!;
+          const f = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-${Math.floor(Math.random() * 1e6)}.mp3`);
+          const r = await tts.synthesizeToFile(v.text, f, v.speed !== undefined ? { speed: v.speed } : undefined);
+          if (r === null) {
+            // eslint-disable-next-line no-console
+            console.warn(`[tts] ${v.label} 合成失败：${text.slice(0, 14)}`);
+            continue;
+          }
+          const stat = await inspectAudio(r);
+          if (stat === null || !stat.ok) {
+            // eslint-disable-next-line no-console
+            console.warn(`[tts] ${v.label} 质检不合格（${stat?.reason ?? "无法解析"}）：${text.slice(0, 14)}`);
+            continue;
+          }
+          if ((stat.voiced ?? 0) < need) {
+            // eslint-disable-next-line no-console
+            console.warn(`[tts] ${v.label} 有效语音过短 ${stat.voiced}s < ${need.toFixed(2)}s：${text.slice(0, 14)}`);
+            continue;
+          }
+          // 择优：先看“尾部有没有自然收尾”（尾静音极小 = 云端把最后一个字硬切了），再看有效语音长度
+          const tail = stat.tailSilence ?? 0;
+          const score = (tail >= 0.05 ? 1000 : tail * 100) + Math.min(stat.voiced ?? 0, need * 3);
+          picks.push({ pick: { file: r, stat }, score });
+          if (tail >= 0.05) break; // 已经是个有收尾的合格产物，不必再花请求
+        }
+        if (picks.length === 0) return null;
+        picks.sort((a, b) => b.score - a.score);
+        return picks[0]!.pick;
+      };
+      const parts: SynthPick[] = [];
+      let complete = true;
       for (const s of sentences) {
-        const f = await synthOne(s);
-        if (f !== null) parts.push(f);
+        const got = await synthOne(s);
+        if (got === null) {
+          complete = false;
+          break;
+        }
+        parts.push(got);
       }
       let sendFile: string | null = null;
-      if (parts.length === 0) {
-        sendFile = null; // 全部失败 → 文字
+      if (!complete || parts.length !== sentences.length) {
+        // eslint-disable-next-line no-console
+        console.warn(`[tts] 有句子合成不出完整语音（${parts.length}/${sentences.length} 句），整条落回文字`);
+        sendFile = null;
       } else if (parts.length === 1) {
-        sendFile = parts[0]!;
+        sendFile = parts[0]!.file;
       } else {
-        const gap = Number(process.env.QQ_TTS_GAP ?? 0.4) || 0.4;
-        sendFile = await concatAudio(parts, gap);
+        sendFile = await concatAudio(parts.map((p) => p.file), envNum("QQ_TTS_GAP", 0.4));
       }
       if (sendFile !== null) {
         // 情绪 → 慢放倍率（音高不变）：基准 QQ_TTS_TEMPO，情绪微调
         const emo = chat.emotion !== undefined ? chat.emotion.state().emotion : "neutral";
-        const baseTempo = Number(process.env.QQ_TTS_TEMPO ?? 0.9) || 0.9;
+        const baseTempo = envNum("QQ_TTS_TEMPO", 0.9);
         const tempo =
           emo === "happy" ? Math.min(1.0, baseTempo + 0.08)
           : emo === "sad" ? Math.max(0.7, baseTempo - 0.12)
           : baseTempo;
-        const stretched = await timeStretchFile(sendFile, tempo);
-        sendFile = stretched ?? sendFile;
-        // 末尾垫 0.5 秒静音：防 QQ 播放器把尾音截掉
-        const padded = await padSilenceFile(sendFile, 0.5);
+        if (tempo < 0.995) {
+          const stretched = await timeStretchFile(sendFile, tempo);
+          sendFile = stretched ?? sendFile;
+        }
+        // 头垫 0.3s + 尾垫 0.8s，统一 24k 单声道：QQ 起播那一下和收尾那一下都吃在静音里
+        const padded = await padSilenceFile(sendFile, envNum("QQ_TTS_TAIL", 0.8), {
+          leadSeconds: envNum("QQ_TTS_LEAD", 0.3),
+          sampleRate: 24000,
+          peak: envNum("QQ_TTS_PEAK", 0.8),
+        });
         sendFile = padded ?? sendFile;
-        voiceLast.set(groupId, Date.now());
-        await httpPost(
-          config.httpBase,
-          "/send_group_msg",
-          { group_id: groupNumber, message: `[CQ:record,file=file:///${sendFile.replace(/\\/g, "/")}]` },
-          config.token,
-        );
-        // eslint-disable-next-line no-console
-        console.log(`[qq-bot] 已语音回复群 ${groupId}：${flat.slice(0, 30)}`);
-        return;
+        const finalStat = await inspectAudio(sendFile);
+        const finalDur = finalStat?.duration ?? 0;
+        // QQ 语音上限 60 秒：超了客户端会直接截断后半段
+        if (!finalStat?.ok || finalDur > 58) {
+          // eslint-disable-next-line no-console
+          console.warn(`[qq-bot] 语音成品不合格（${finalStat?.reason ?? "解析失败"} / ${finalDur}s），落回文字`);
+        } else {
+          voiceLast.set(groupId, Date.now());
+          await httpPost(
+            config.httpBase,
+            "/send_group_msg",
+            { group_id: groupNumber, message: `[CQ:record,file=file:///${sendFile.replace(/\\/g, "/")}]` },
+            config.token,
+          );
+          // eslint-disable-next-line no-console
+          console.log(
+            `[qq-bot] 已语音回复群 ${groupId}：${flat.slice(0, 30)}（${sentences.length} 句 / ${finalDur}s / 尾静音 ${finalStat.tailSilence}s）`,
+          );
+          return;
+        }
       }
       // eslint-disable-next-line no-console
-      console.warn("[qq-bot] 语音合成失败，落回文字回复");
+      console.warn("[qq-bot] 语音不可用，落回文字回复");
     }
     const final = withKaomoji(groupId, chat, flat); // 文字路径才加颜文字（语音读出来怪）
     for (const chunk of splitForSend(final, config.maxReplyLen)) {

@@ -4,7 +4,11 @@ import { createCloudTts } from "./cloud-tts";
 
 export interface TtsEngine {
   /** 合成语音到本地文件，成功返回路径，失败返回 null；emotion 会映射为语速变化 */
-  synthesizeToFile(text: string, outPath: string, opts?: { emotion?: string }): Promise<string | null>;
+  synthesizeToFile(
+    text: string,
+    outPath: string,
+    opts?: { emotion?: string; speed?: number; gain?: number },
+  ): Promise<string | null>;
 }
 
 export function createTtsEngine(): TtsEngine {

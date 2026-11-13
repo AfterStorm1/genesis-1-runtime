@@ -3,9 +3,11 @@
 // 用 silk-wasm（官方 libSilkCodec 的 WASM 构建）解码成 PCM 再封装 wav。
 import fs from "node:fs";
 
-/** 判断是否腾讯 silk v3（#!SILK_V3 魔数）（导出供测试） */
+/** 判断是否腾讯 silk v3（#!SILK_V3 魔数）（导出供测试）
+ *  注意：QQ 落盘的语音文件常以 0x02 这个字节打头（`02 #!SILK_V3`），
+ *  所以不能只看第 0 字节——在头部 10 字节内找魔数（与 NapCat 自己的判断一致）。 */
 export function isSilkV3(head: Buffer): boolean {
-  return head.length >= 9 && head.subarray(0, 9).toString("ascii") === "#!SILK_V3";
+  return head.subarray(0, 10).toString("latin1").includes("#!SILK_V3");
 }
 
 /** 读文件头判断是否 silk（导出供测试） */
@@ -41,15 +43,33 @@ export function writePcmWav(outPath: string, pcm: Int16Array, sampleRate: number
   fs.writeFileSync(outPath, Buffer.concat([header, data]));
 }
 
+interface SilkWasmDecodeResult {
+  /** pcm_s16le */
+  data: Uint8Array | Int16Array;
+  /** 毫秒 */
+  duration: number;
+}
+
 interface SilkWasmModule {
-  decode(buffer: Uint8Array, sampleRate: number): Promise<Int16Array>;
+  decode(buffer: Uint8Array, sampleRate: number): Promise<SilkWasmDecodeResult | Int16Array>;
+}
+
+/** 把 silk-wasm 的解码结果统一成 Int16Array（3.x 返回 {data,duration}，老版本直接返回 PCM） */
+function toPcm(res: SilkWasmDecodeResult | Int16Array): Int16Array {
+  if (res instanceof Int16Array) return res;
+  const raw = res.data;
+  if (raw instanceof Int16Array) return raw;
+  // Uint8Array → 复制到 2 字节对齐的新 buffer 再当 PCM 用
+  const copy = new Uint8Array(raw.byteLength);
+  copy.set(raw);
+  return new Int16Array(copy.buffer, 0, copy.byteLength >> 1);
 }
 
 /** silk v3 → wav（24k 采样率与 QQ 语音一致；云端 API 接受 24k wav） */
 export async function decodeSilkToWav(inputPath: string, outPath: string, sampleRate = 24_000): Promise<string> {
   const silk = (await import("silk-wasm")) as SilkWasmModule;
   const buf = fs.readFileSync(inputPath);
-  const pcm = await silk.decode(buf, sampleRate);
+  const pcm = toPcm(await silk.decode(buf, sampleRate));
   writePcmWav(outPath, pcm, sampleRate);
   return outPath;
 }

@@ -18,6 +18,8 @@ def main() -> None:
     for f in inp.decode(st):
         for rf in res.resample(f):
             chunks.append(rf.to_ndarray())
+    for rf in res.resample(None):  # 必须 flush，否则末尾几十毫秒会被吞掉（听感=结尾少字）
+        chunks.append(rf.to_ndarray())
     pcm = np.concatenate([c.ravel() for c in chunks]) if chunks else np.zeros(0, dtype=np.int16)
     # 核心：以 rate*tempo 的采样率写入 wav → 播放更慢、音高更低，无任何数字痕迹
     out_rate = max(4000, int(round(rate * tempo)))
