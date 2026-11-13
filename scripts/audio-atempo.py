@@ -7,7 +7,7 @@ import av
 import numpy as np
 
 
-def phase_vocoder(x: np.ndarray, factor: float, n_fft: int = 1024, hop: int = 256) -> np.ndarray:
+def phase_vocoder(x: np.ndarray, factor: float, n_fft: int = 2048, hop: int = 512) -> np.ndarray:
     win = np.hanning(n_fft)
     x = np.pad(x, (n_fft // 2, n_fft // 2))
     steps = 1 + (len(x) - n_fft) // hop
