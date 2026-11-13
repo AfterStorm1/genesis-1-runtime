@@ -58,6 +58,7 @@ core（骨架，不动）→ composition（装配）→ layers（默认实现）
 - 引擎：仅 SiliconFlow 云端（`TTS_CLOUD_VOICE=speech:hui-voice:…` 克隆音色；`TTS_ENGINE=cloud`）；**微软 Edge 语音已彻底移除**
 - 参数：`QQ_TTS_TEMPO`（慢放倍率；<1 时音高随之下沉——0.85 会显呆/鼻音重，1.0 听感最优）、`QQ_TTS_GAP=0.4`、`QQ_HESITATION_RATE=0.12`（12% 概率开头「嗯，」）、`TTS_CLOUD_SPEED=1.0`
 - 新增（防首尾被吃）：`QQ_TTS_LEAD=0.3`（头垫静音）、`QQ_TTS_TAIL=0.8`（尾垫静音）、`QQ_TTS_PEAK=0.8`（峰值归一，云端各音色音量差 3 倍）、`QQ_TTS_TRIES=3`（每句变体/重试次数）
+- 新增（防干等）：`QQ_TTS_BREAKER=4`（连续 4 次废产物就熔断）、`QQ_TTS_BREAKER_MS=300000`（熔断 5 分钟内语音直接走文字，到点自动再试一次）
 - 克隆：`clone-voice.cmd`（自动读 data/tmp/voice-ref.txt 生成基准→上传）；克隆音色路径：上传参考音频→uri→填 TTS_CLOUD_VOICE
 
 
