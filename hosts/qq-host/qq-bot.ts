@@ -310,7 +310,13 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           if ((d !== null && d < 0.8 && text.length >= 4) || d === null) {
             const f2 = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-r.mp3`);
             const r2 = await tts.synthesizeToFile(text, f2, undefined);
-            r = r2 ?? null;
+            if (r2 !== null) {
+              // 重试结果也要二次质检（服务器可能吐损坏 mp3）
+              const d2 = await audioDuration(r2);
+              r = d2 !== null && d2 >= 0.8 ? r2 : null;
+            } else {
+              r = null;
+            }
           }
         }
         if (r === null) {

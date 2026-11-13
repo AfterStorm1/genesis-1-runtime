@@ -92,7 +92,7 @@ export function concatAudio(files: string[], gapSeconds: number): Promise<string
         resolve(m?.[1]?.trim() ?? out);
       } else {
         // eslint-disable-next-line no-console
-        console.warn(`[tts] 音频拼接失败：${stderr.slice(-200)}`);
+        console.warn(`[tts] 音频拼接失败（含坏文件已跳过）：${stderr.slice(-200)}`);
         resolve(null);
       }
     });
