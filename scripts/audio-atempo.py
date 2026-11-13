@@ -23,7 +23,7 @@ def phase_vocoder(x: np.ndarray, factor: float, n_fft: int = 1024, hop: int = 25
     acc = np.cumsum(true, axis=0) + phase[0]
 
     t = np.arange(0, steps, factor)
-    out_len = int(np.ceil(t[-1])) + 1 if len(t) > 0 else 1
+    out_len = len(t)
     y = np.zeros(out_len * hop + n_fft, dtype=np.float64)
     norm = np.zeros_like(y)
     for i, ti in enumerate(t):
