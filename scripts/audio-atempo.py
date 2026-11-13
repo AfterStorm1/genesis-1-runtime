@@ -34,8 +34,11 @@ def phase_vocoder(x: np.ndarray, factor: float, n_fft: int = 1024, hop: int = 25
         p = acc[i0] + frac * (acc[i1] - acc[i0])
         seg = np.fft.irfft(m * np.exp(1j * p), n_fft) * win
         pos = i * hop
-        y[pos : pos + n_fft] += seg
-        norm[pos : pos + n_fft] += win * win
+        n = min(n_fft, len(y) - pos)
+        if n <= 0:
+            break
+        y[pos : pos + n] += seg[:n]
+        norm[pos : pos + n] += win[:n] * win[:n]
     y = y[n_fft // 2 :]
     norm = norm[n_fft // 2 :]
     y = y / np.maximum(norm, 1e-6)
