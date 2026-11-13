@@ -18,8 +18,9 @@ export interface EdgeTtsConfig {
 export function resolveEdgeTtsConfig(): EdgeTtsConfig {
   return {
     voice: process.env.TTS_EDGE_VOICE ?? "zh-CN-XiaoxiaoNeural",
-    rate: process.env.TTS_EDGE_RATE ?? "+0%",
-    pitch: process.env.TTS_EDGE_PITCH ?? "+0Hz",
+    // 声线基调：低音区（pitch -3Hz）、偏慢（rate -12%）——「三无冷淡少女低音」的参数逼近
+    rate: process.env.TTS_EDGE_RATE ?? "-12%",
+    pitch: process.env.TTS_EDGE_PITCH ?? "-3Hz",
     python:
       process.env.TTS_PYTHON ?? path.join(process.cwd(), "tools", "whisper-py", "Scripts", "python.exe"),
   };

@@ -21,7 +21,7 @@ export function resolveTtsConfig(): CloudTtsConfig {
     baseUrl: (process.env.TTS_CLOUD_BASE_URL ?? stt.baseUrl).replace(/\/+$/, ""),
     model: process.env.TTS_CLOUD_MODEL ?? "FunAudioLLM/CosyVoice2-0.5B",
     voice: process.env.TTS_CLOUD_VOICE ?? "FunAudioLLM/CosyVoice2-0.5B:claire",
-    speed: Number(process.env.TTS_CLOUD_SPEED ?? 0.95) || 0.95,
+    speed: Number(process.env.TTS_CLOUD_SPEED ?? 0.9) || 0.9,
     gain: Number(process.env.TTS_CLOUD_GAIN ?? 0) || 0,
     key: process.env.TTS_CLOUD_KEY ?? stt.key,
   };
@@ -37,7 +37,7 @@ export function emotionHint(emotion: string): string | undefined {
     case "angry":
       return "用克制但认真的语气说";
     case "calm":
-      return "用平静温和的语气说";
+      return "用平静而克制的语气说";
     default:
       return undefined;
   }
