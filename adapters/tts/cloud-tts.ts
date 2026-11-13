@@ -54,13 +54,29 @@ export interface CloudTts {
   uploadVoice(filePath: string, customName: string, refText: string): Promise<string | null>;
 }
 
+/** 情绪 → 云端语速（情绪指令会被念出来，改用速度表达情感）（导出供测试） */
+export function emotionSpeed(emotion: string): number | undefined {
+  switch (emotion) {
+    case "happy":
+      return 1.0; // 轻快一点
+    case "sad":
+      return 0.8; // 明显放缓
+    case "angry":
+      return 0.95;
+    case "calm":
+      return 0.88; // 平静偏慢
+    default:
+      return undefined;
+  }
+}
+
 export function createCloudTts(): CloudTts {
   const config = resolveTtsConfig();
   return {
     async synthesizeToFile(
       text: string,
       outPath: string,
-      opts?: { speed?: number; gain?: number; emotionHint?: string },
+      opts?: { speed?: number; gain?: number; emotionHint?: string; emotion?: string },
     ): Promise<string | null> {
       if (config.key === undefined) {
         // eslint-disable-next-line no-console
@@ -83,7 +99,7 @@ export function createCloudTts(): CloudTts {
               voice: config.voice,
               input,
               response_format: "mp3",
-              speed: opts?.speed ?? config.speed,
+              speed: opts?.speed ?? (opts?.emotion !== undefined ? emotionSpeed(opts.emotion) : undefined) ?? config.speed,
               gain: opts?.gain ?? config.gain,
             }),
           });

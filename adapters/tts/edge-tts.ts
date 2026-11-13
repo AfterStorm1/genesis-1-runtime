@@ -59,8 +59,8 @@ export function createTtsEngine(): TtsEngine {
       console.log("[tts] TTS_ENGINE=cloud：直走云端（GPT-SoVITS/CosyVoice + 克隆音色）");
     }
     return {
-      async synthesizeToFile(text, outPath) {
-        return cloud.synthesizeToFile(text, outPath);
+      async synthesizeToFile(text, outPath, opts) {
+        return cloud.synthesizeToFile(text, outPath, opts);
       },
     };
   }
@@ -139,7 +139,7 @@ export function createTtsEngine(): TtsEngine {
         // eslint-disable-next-line no-console
         console.warn("[tts] Edge 不可用，使用云端兜底。装 Edge：tools\\whisper-py\\Scripts\\python.exe -m pip install edge-tts -i https://pypi.tuna.tsinghua.edu.cn/simple");
       }
-      return cloud.synthesizeToFile(text, outPath);
+      return cloud.synthesizeToFile(text, outPath, opts);
     },
   };
 }
