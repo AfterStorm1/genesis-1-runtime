@@ -307,8 +307,6 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       }
       // —— 逐句合成管线：每句独立质检（防截断/防静音），全部合格才发语音 ——
       // 硬规则：任何一句拿不到合格产物 → 整条落回文字，绝不发缺头少尾的半条语音。
-      const spokenWithHes = withHesitation(forTts(spoken)); // 打顿落在第一句
-      const sentences = sentencesForTts(spokenWithHes);
       /** 环境变量读数值：0 是合法值（比如关掉垫静音），不能用 `|| 默认值` */
       const envNum = (name: string, def: number): number => {
         const raw = process.env[name];
@@ -316,24 +314,29 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         const n = Number(raw);
         return Number.isFinite(n) ? n : def;
       };
+      const spokenWithHes = withHesitation(forTts(spoken)); // 打顿落在第一句
+      const sentences = sentencesForTts(spokenWithHes);
+      /** 一条回复最多在语音上花多久（云端抽风时别把人晾着）；超时整条落文字 */
+      const voiceDeadline = Date.now() + Math.max(5000, envNum("QQ_TTS_BUDGET_MS", 20_000));
       /** 质检门槛：字数越多，要求的最低有效语音越长（防“只合成了一两个字”） */
       const minVoiced = (text: string): number =>
         Math.max(0.35, text.replace(/[，。！？、…,.!?\s]/g, "").length * 0.16);
-      /** 熔断：连续 N 次废产物（空响应/静音桩/半句）就纯文字一阵，避免每条回复都干等十几秒 */
-      const breakerStrikes = Math.max(1, Math.round(envNum("QQ_TTS_BREAKER", 4)));
+      /** 熔断：连续 N 条回复都拿不到语音就纯文字一阵，避免每条都干等十几秒 */
+      const breakerStrikes = Math.max(1, Math.round(envNum("QQ_TTS_BREAKER", 3)));
       const breakerMs = Math.max(30_000, envNum("QQ_TTS_BREAKER_MS", 300_000));
       const tripBreaker = (): void => {
+        voiceBreaker.strikes++;
         if (voiceBreaker.strikes < breakerStrikes) return;
         voiceBreaker.openUntil = Date.now() + breakerMs;
         voiceBreaker.strikes = 0;
         // eslint-disable-next-line no-console
-        console.warn(`[tts] 语音通道连续失败 ${breakerStrikes} 次，熔断 ${Math.round(breakerMs / 1000)}s（期间纯文字）`);
+        console.warn(`[tts] 连续 ${breakerStrikes} 条回复都拿不到语音，熔断 ${Math.round(breakerMs / 1000)}s（期间纯文字）`);
       };
       type SynthPick = { file: string; stat: AudioStat };
       const synthOne = async (text: string): Promise<SynthPick | null> => {
-        const tries = Math.max(1, Math.round(envNum("QQ_TTS_TRIES", 3)));
+        const tries = Math.max(1, Math.round(envNum("QQ_TTS_TRIES", 4)));
         const need = minVoiced(text);
-        // 变体：①原句 ②前补逗号（有的模型会把起句的音吞掉） ③语速轻调，换个采样碰运气
+        // 变体：①原句 ②前补逗号（有的模型会把起句的音吞掉） ③④ 换个语速再碰
         const variants: { label: string; text: string; speed?: number }[] = [
           { label: "原句", text },
           { label: "前补逗号", text: `，${text}` },
@@ -342,24 +345,26 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         ];
         const picks: { pick: SynthPick; score: number }[] = [];
         for (let i = 0; i < Math.min(tries, variants.length); i++) {
+          if (Date.now() > voiceDeadline) {
+            // eslint-disable-next-line no-console
+            console.warn(`[tts] 语音时间预算用尽（${Math.round(envNum("QQ_TTS_BUDGET_MS", 20_000) / 1000)}s），这条落文字`);
+            break;
+          }
           const v = variants[i]!;
           const f = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-${Math.floor(Math.random() * 1e6)}.mp3`);
           const r = await tts.synthesizeToFile(v.text, f, v.speed !== undefined ? { speed: v.speed } : undefined);
           if (r === null) {
-            voiceBreaker.strikes++;
             // eslint-disable-next-line no-console
             console.warn(`[tts] ${v.label} 合成失败：${text.slice(0, 14)}`);
             continue;
           }
           const stat = await inspectAudio(r);
           if (stat === null || !stat.ok) {
-            voiceBreaker.strikes++;
             // eslint-disable-next-line no-console
             console.warn(`[tts] ${v.label} 质检不合格（${stat?.reason ?? "无法解析"}）：${text.slice(0, 14)}`);
             continue;
           }
           if ((stat.voiced ?? 0) < need) {
-            voiceBreaker.strikes++;
             // eslint-disable-next-line no-console
             console.warn(`[tts] ${v.label} 有效语音过短 ${stat.voiced}s < ${need.toFixed(2)}s：${text.slice(0, 14)}`);
             continue;
@@ -368,13 +373,9 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
           const tail = stat.tailSilence ?? 0;
           const score = (tail >= 0.05 ? 1000 : tail * 100) + Math.min(stat.voiced ?? 0, need * 3);
           picks.push({ pick: { file: r, stat }, score });
-          voiceBreaker.strikes = 0; // 拿到合格产物了，熔断计数清零
           if (tail >= 0.05) break; // 已经是个有收尾的合格产物，不必再花请求
         }
-        if (picks.length === 0) {
-          tripBreaker();
-          return null;
-        }
+        if (picks.length === 0) return null;
         picks.sort((a, b) => b.score - a.score);
         return picks[0]!.pick;
       };
@@ -392,6 +393,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       if (!complete || parts.length !== sentences.length) {
         // eslint-disable-next-line no-console
         console.warn(`[tts] 有句子合成不出完整语音（${parts.length}/${sentences.length} 句），整条落回文字`);
+        tripBreaker();
         sendFile = null;
       } else if (parts.length === 1) {
         sendFile = parts[0]!.file;
@@ -421,13 +423,11 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         const finalDur = finalStat?.duration ?? 0;
         // QQ 语音上限 60 秒：超了客户端会直接截断后半段
         if (!finalStat?.ok || finalDur > 58) {
-          if (!finalStat?.ok) {
-            voiceBreaker.strikes++;
-            tripBreaker();
-          }
+          if (!finalStat?.ok) tripBreaker();
           // eslint-disable-next-line no-console
           console.warn(`[qq-bot] 语音成品不合格（${finalStat?.reason ?? "解析失败"} / ${finalDur}s），落回文字`);
         } else {
+          voiceBreaker.strikes = 0; // 这条发出去了，熔断计数清零
           voiceLast.set(groupId, Date.now());
           await httpPost(
             config.httpBase,

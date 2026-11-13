@@ -102,6 +102,8 @@ export function createCloudTts(): CloudTts {
               speed: opts?.speed ?? (opts?.emotion !== undefined ? emotionSpeed(opts.emotion) : undefined) ?? config.speed,
               gain: opts?.gain ?? config.gain,
             }),
+            // 没有超时的话，偶发的挂起会把一条回复拖到一分钟（实测见过 47s 空等）
+            signal: AbortSignal.timeout(Number(process.env.TTS_CLOUD_TIMEOUT_MS ?? 15_000) || 15_000),
           });
           if (res.ok) {
             const buf = Buffer.from(await res.arrayBuffer());
