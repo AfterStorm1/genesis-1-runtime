@@ -251,6 +251,17 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     return `${textReply} ${k}`;
   };
 
+  /** 给语音引擎补句读：台词无标点会让 TTS 失去降调（语音助手腔），合成前逐句补“。” */
+  const forTts = (spoken: string): string =>
+    spoken
+      .split(/[。！？!?…]+|\s+/)
+      .filter((s) => s !== "")
+      .map((s) => {
+        const last = s.slice(-1);
+        return last === "？" || last === "?" || last === "！" || last === "!" || last === "…" ? s : `${s}。`;
+      })
+      .join("");
+
   /** 回复发送：对老板/喜欢的人可用语音（TTS，短句），失败/不满足时落回文字 */
   const voiceLast = new Map<string, number>();
   /** 语音前剥掉命令样内容与动作描述（set/rem 行、TTS_ 字样、（动作）括号），防止念出来 */
@@ -283,7 +294,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const out = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}.mp3`);
       // 语音跟着她的心情走：情绪状态 → 语气/语速（Edge 用语速模拟，云端用语气指令）
       const made = await tts.synthesizeToFile(
-        spoken,
+        forTts(spoken),
         out,
         chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
       );
