@@ -55,7 +55,7 @@ def main() -> None:
             chunks.append(rf.to_ndarray())
     for rf in res.resample(None):
         chunks.append(rf.to_ndarray())
-    audio = np.concatenate(chunks).ravel() if chunks else np.zeros(0, dtype=np.float32)
+    audio = np.concatenate([c.ravel() for c in chunks]) if chunks else np.zeros(0, dtype=np.float32)
     stretched = phase_vocoder(audio, tempo)
     s16 = (np.clip(stretched, -1.0, 1.0) * 32767).astype(np.int16)
     with wave.open(out, "wb") as w:

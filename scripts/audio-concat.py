@@ -24,7 +24,7 @@ def main() -> None:
             for fr in c.decode(st):
                 for rf in res.resample(fr):
                     chunks.append(rf.to_ndarray())
-            pcm = np.concatenate(chunks).ravel() if chunks else np.zeros(0, dtype=np.int16)
+            pcm = np.concatenate([c.ravel() for c in chunks]) if chunks else np.zeros(0, dtype=np.int16)
             if len(pcm) == 0:
                 skipped += 1
                 print(f"skip empty: {f}", file=sys.stderr, flush=True)
