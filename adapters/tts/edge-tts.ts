@@ -62,10 +62,10 @@ export function createTtsEngine(): TtsEngine {
     return ready;
   };
 
-  const runEdge = (textFile: string, out: string, rate: string, pitch: string): Promise<void> =>
+  const runEdge = (textFile: string, out: string, rate: string, pitch: string, voice: string): Promise<void> =>
     new Promise((resolve, reject) => {
       const script = path.join(process.cwd(), "scripts", "tts-edge.py");
-      const p = spawn(edge.python, [script, textFile, out, edge.voice, rate, pitch], {
+      const p = spawn(edge.python, [script, textFile, out, voice, rate, pitch], {
         stdio: ["ignore", "ignore", "pipe"],
       });
       let err = "";
@@ -92,13 +92,18 @@ export function createTtsEngine(): TtsEngine {
           fs.writeFileSync(textFile, text, "utf8");
           const rate = opts?.emotion !== undefined ? emotionRate(opts.emotion) : edge.rate;
           try {
-            await runEdge(textFile, outPath, rate, edge.pitch);
+            await runEdge(textFile, outPath, rate, edge.pitch, edge.voice);
           } catch (firstErr) {
             if (edge.pitch !== "+0Hz") {
               // 音高参数被拒时自动重试默认音高（NoAudioReceived 常见于此）
               // eslint-disable-next-line no-console
               console.warn(`[tts] Edge 带音高失败，重试默认音高：${firstErr instanceof Error ? firstErr.message.slice(0, 120) : ""}`);
-              await runEdge(textFile, outPath, rate, "+0Hz");
+              await runEdge(textFile, outPath, rate, "+0Hz", edge.voice);
+            } else if (edge.voice !== "zh-CN-XiaoxiaoNeural") {
+              // 音色名服务端不认（新一批音色如晓涵/晓梦不可用）：兜底晓晓
+              // eslint-disable-next-line no-console
+              console.warn("[tts] 配置音色不可用，兜底晓晓（zh-CN-XiaoxiaoNeural）");
+              await runEdge(textFile, outPath, rate, "+0Hz", "zh-CN-XiaoxiaoNeural");
             } else {
               throw firstErr;
             }
