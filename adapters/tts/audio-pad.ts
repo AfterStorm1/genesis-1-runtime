@@ -32,7 +32,7 @@ export function audioDuration(filePath: string): Promise<number | null> {
   });
 }
 
-/** atempo 慢放（音高不变）：合成保持原速，后期再慢放，避免克隆音色变速电音 */
+/** 重采样慢放（音高随之下沉，零电音）：合成保持原速，后期再慢放 */
 export function timeStretchFile(inputPath: string, tempo: number): Promise<string | null> {
   return new Promise((resolve) => {
     const python =
