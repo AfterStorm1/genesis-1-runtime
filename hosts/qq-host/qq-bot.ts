@@ -11,14 +11,15 @@ import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whispe
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
 import { createTtsEngine } from "../../adapters/tts/edge-tts";
-import { audioDuration, padSilenceFile } from "../../adapters/tts/audio-pad";
+import { audioDuration, padSilenceFile, timeStretchFile } from "../../adapters/tts/audio-pad";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
 /** 图片识别（视觉模型，key 复用 SiliconFlow） */
 const imageDescriber = createImageDescriber();
-/** TTS 引擎（Edge 免费首选 → SiliconFlow 云端兜底；音色经 TTS_EDGE_VOICE / TTS_CLOUD_VOICE 自定义） */
+/** TTS 引擎（云端克隆音色首选；晓晓 Edge 兜底，防云端截断） */
 const tts = createTtsEngine();
+const edgeFallbackTts = createTtsEngine("edge");
 
 /** 冒犯词（观察区域判定；严重越界另有终止钩子） */
 export const OFFENSE_WORDS: readonly string[] = [
@@ -303,21 +304,34 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const made = await tts.synthesizeToFile(
         withHesitation(forTts(spoken)),
         out,
-        chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
+        undefined, // 合成保持原速（克隆音色对变速敏感），慢放交给后面 atempo
       );
       if (made !== null) {
-        // 时长守卫：合成结果异常短（如只念出"嗯"）→ 用干净文本重试一次
+        // 时长守卫：合成结果异常短 → 干净文本重试一次 → 仍异常则晓晓兜底
         let sendFile = made;
         const dur = await audioDuration(made);
         if ((dur !== null && dur < 1.2 && spoken.length >= 8) || dur === null) {
           const out2 = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-r.mp3`);
-          const retry = await tts.synthesizeToFile(
-            forTts(spoken),
-            out2,
-            chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
-          );
+          const retry = await tts.synthesizeToFile(forTts(spoken), out2, undefined);
           if (retry !== null) sendFile = retry;
+          const dur2 = await audioDuration(sendFile);
+          if ((dur2 !== null && dur2 < 1.2 && spoken.length >= 8) || dur2 === null) {
+            // eslint-disable-next-line no-console
+            console.warn("[qq-bot] 云端语音持续截断，本条改用晓晓兜底");
+            const out3 = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-e.mp3`);
+            const ef = await edgeFallbackTts.synthesizeToFile(forTts(spoken), out3, undefined);
+            if (ef !== null) sendFile = ef;
+          }
         }
+        // 情绪 → 慢放倍率（音高不变）：基准 QQ_TTS_TEMPO，情绪微调
+        const emo = chat.emotion !== undefined ? chat.emotion.state().emotion : "neutral";
+        const baseTempo = Number(process.env.QQ_TTS_TEMPO ?? 0.9) || 0.9;
+        const tempo =
+          emo === "happy" ? Math.min(1.0, baseTempo + 0.08)
+          : emo === "sad" ? Math.max(0.7, baseTempo - 0.12)
+          : baseTempo;
+        const stretched = await timeStretchFile(sendFile, tempo);
+        sendFile = stretched ?? sendFile;
         // 末尾垫 0.5 秒静音：防 QQ 播放器把尾音截掉
         const padded = await padSilenceFile(sendFile, 0.5);
         sendFile = padded ?? sendFile;

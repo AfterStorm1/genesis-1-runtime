@@ -45,10 +45,10 @@ export interface TtsEngine {
   synthesizeToFile(text: string, outPath: string, opts?: { emotion?: string }): Promise<string | null>;
 }
 
-export function createTtsEngine(): TtsEngine {
+export function createTtsEngine(force?: "edge" | "cloud" | "off"): TtsEngine {
   const edge = resolveEdgeTtsConfig();
   const cloud = createCloudTts();
-  const forced = process.env.TTS_ENGINE ?? "edge"; // edge | cloud | off
+  const forced = force ?? process.env.TTS_ENGINE ?? "edge"; // edge | cloud | off
   let ready: Promise<boolean> | null = null;
   let logged = false;
 

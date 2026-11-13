@@ -32,6 +32,38 @@ export function audioDuration(filePath: string): Promise<number | null> {
   });
 }
 
+/** atempo 慢放（音高不变）：合成保持原速，后期再慢放，避免克隆音色变速电音 */
+export function timeStretchFile(inputPath: string, tempo: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    const python =
+      process.env.TTS_PYTHON ?? path.join(process.cwd(), "tools", "whisper-py", "Scripts", "python.exe");
+    const out = inputPath.replace(/\.(mp3|wav)$/i, "") + `-slow${Math.round(tempo * 100)}.wav`;
+    const script = path.join(process.cwd(), "scripts", "audio-atempo.py");
+    const p = spawn(python, [script, inputPath, out, String(tempo)], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    p.stdout?.on("data", (d: Buffer) => {
+      stdout += d.toString("utf8");
+    });
+    p.stderr?.on("data", (d: Buffer) => {
+      stderr += d.toString("utf8");
+    });
+    p.on("exit", (code) => {
+      if (code === 0) {
+        const m = stdout.match(/ok\s+(.+)$/m);
+        resolve(m?.[1]?.trim() ?? out);
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn(`[tts] atempo 慢放失败（直接发原音频）：${stderr.slice(-200)}`);
+        resolve(null);
+      }
+    });
+    p.on("error", () => resolve(null));
+  });
+}
+
 export function padSilenceFile(inputPath: string, seconds = 0.5): Promise<string | null> {
   return new Promise((resolve) => {
     const python =
