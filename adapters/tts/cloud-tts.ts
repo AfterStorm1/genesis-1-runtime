@@ -44,11 +44,11 @@ export function emotionHint(emotion: string): string | undefined {
 }
 
 export interface CloudTts {
-  /** 合成语音到本地文件，成功返回路径，失败返回 null */
+  /** 合成语音到本地文件，成功返回路径，失败返回 null；emotion 会映射为语速变化 */
   synthesizeToFile(
     text: string,
     outPath: string,
-    opts?: { speed?: number; gain?: number; emotionHint?: string },
+    opts?: { speed?: number; gain?: number; emotionHint?: string; emotion?: string },
   ): Promise<string | null>;
   /** 上传参考音频克隆音色，成功返回 uri */
   uploadVoice(filePath: string, customName: string, refText: string): Promise<string | null>;
