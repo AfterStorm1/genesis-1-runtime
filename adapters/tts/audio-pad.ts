@@ -64,6 +64,42 @@ export function timeStretchFile(inputPath: string, tempo: number): Promise<strin
   });
 }
 
+/** 多段音频按序拼接，句间插入静音（断句节奏可控），输出无损 wav */
+export function concatAudio(files: string[], gapSeconds: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (files.length === 0) {
+      resolve(null);
+      return;
+    }
+    const python =
+      process.env.TTS_PYTHON ?? path.join(process.cwd(), "tools", "whisper-py", "Scripts", "python.exe");
+    const out = path.join(path.dirname(files[0]!), `qq-voice-joined-${Date.now()}.wav`);
+    const script = path.join(process.cwd(), "scripts", "audio-concat.py");
+    const p = spawn(python, [script, String(gapSeconds), out, ...files], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    p.stdout?.on("data", (d: Buffer) => {
+      stdout += d.toString("utf8");
+    });
+    p.stderr?.on("data", (d: Buffer) => {
+      stderr += d.toString("utf8");
+    });
+    p.on("exit", (code) => {
+      if (code === 0) {
+        const m = stdout.match(/ok\s+(.+)$/m);
+        resolve(m?.[1]?.trim() ?? out);
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn(`[tts] 音频拼接失败：${stderr.slice(-200)}`);
+        resolve(null);
+      }
+    });
+    p.on("error", () => resolve(null));
+  });
+}
+
 export function padSilenceFile(inputPath: string, seconds = 0.5): Promise<string | null> {
   return new Promise((resolve) => {
     const python =

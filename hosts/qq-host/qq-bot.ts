@@ -11,7 +11,7 @@ import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whispe
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
 import { createTtsEngine } from "../../adapters/tts/edge-tts";
-import { audioDuration, padSilenceFile, timeStretchFile } from "../../adapters/tts/audio-pad";
+import { audioDuration, concatAudio, padSilenceFile, timeStretchFile } from "../../adapters/tts/audio-pad";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
@@ -254,15 +254,15 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
   };
 
   /** 给语音引擎补句读：台词无标点会让 TTS 失去降调（语音助手腔），合成前逐句补“。” */
-  const forTts = (spoken: string): string =>
+  const forTts = (spoken: string): string => sentencesForTts(spoken).join("");
+  const sentencesForTts = (spoken: string): string[] =>
     spoken
       .split(/[。！？!?…]+|\s+/)
       .filter((s) => s !== "")
       .map((s) => {
         const last = s.slice(-1);
         return last === "？" || last === "?" || last === "！" || last === "!" || last === "…" ? s : `${s}。`;
-      })
-      .join("");
+      });
   /** 偶尔开头打个顿（“嗯，”）——一点点不完美更像真人；QQ_HESITATION_RATE 可调，0 关闭 */
   const withHesitation = (spoken: string): string => {
     const rate = Number(process.env.QQ_HESITATION_RATE ?? 0.12);
@@ -299,30 +299,43 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         }
         return;
       }
-      const out = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}.mp3`);
-      // 语音跟着她的心情走：情绪状态 → 语气/语速（Edge 用语速模拟，云端用语气指令）
-      const made = await tts.synthesizeToFile(
-        withHesitation(forTts(spoken)),
-        out,
-        undefined, // 合成保持原速（克隆音色对变速敏感），慢放交给后面 atempo
-      );
-      if (made !== null) {
-        // 时长守卫：合成结果异常短 → 干净文本重试一次 → 仍异常则晓晓兜底
-        let sendFile = made;
-        const dur = await audioDuration(made);
-        if ((dur !== null && dur < 1.2 && spoken.length >= 8) || dur === null) {
-          const out2 = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-r.mp3`);
-          const retry = await tts.synthesizeToFile(forTts(spoken), out2, undefined);
-          if (retry !== null) sendFile = retry;
-          const dur2 = await audioDuration(sendFile);
-          if ((dur2 !== null && dur2 < 1.2 && spoken.length >= 8) || dur2 === null) {
-            // eslint-disable-next-line no-console
-            console.warn("[qq-bot] 云端语音持续截断，本条改用晓晓兜底");
-            const out3 = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-e.mp3`);
-            const ef = await edgeFallbackTts.synthesizeToFile(forTts(spoken), out3, undefined);
-            if (ef !== null) sendFile = ef;
+      // —— 逐句合成管线：每句独立质检（防截断），拼接时插入固定停顿（断句节奏可控）——
+      const spokenWithHes = withHesitation(forTts(spoken)); // 打顿落在第一句
+      const sentences = sentencesForTts(spokenWithHes);
+      const synthOne = async (text: string): Promise<string | null> => {
+        const f = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-${Math.floor(Math.random() * 1e6)}.mp3`);
+        let r = await tts.synthesizeToFile(text, f, undefined);
+        if (r !== null) {
+          const d = await audioDuration(r);
+          if ((d !== null && d < 0.8 && text.length >= 4) || d === null) {
+            const f2 = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-r.mp3`);
+            const r2 = await tts.synthesizeToFile(text, f2, undefined);
+            r = r2 ?? null;
           }
         }
+        if (r === null) {
+          // 云端不可用/持续截断 → 整句晓晓兜底
+          const fe = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-e.mp3`);
+          r = await edgeFallbackTts.synthesizeToFile(text, fe, undefined);
+        }
+        return r;
+      };
+      const parts: string[] = [];
+      for (const s of sentences) {
+        const f = await synthOne(s);
+        if (f !== null) parts.push(f);
+      }
+      let sendFile: string | null = null;
+      if (parts.length === 0) {
+        const fe = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}-e.mp3`);
+        sendFile = await edgeFallbackTts.synthesizeToFile(forTts(spoken), fe, undefined);
+      } else if (parts.length === 1) {
+        sendFile = parts[0]!;
+      } else {
+        const gap = Number(process.env.QQ_TTS_GAP ?? 0.4) || 0.4;
+        sendFile = await concatAudio(parts, gap);
+      }
+      if (sendFile !== null) {
         // 情绪 → 慢放倍率（音高不变）：基准 QQ_TTS_TEMPO，情绪微调
         const emo = chat.emotion !== undefined ? chat.emotion.state().emotion : "neutral";
         const baseTempo = Number(process.env.QQ_TTS_TEMPO ?? 0.9) || 0.9;
