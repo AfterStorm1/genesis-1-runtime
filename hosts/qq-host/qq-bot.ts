@@ -11,6 +11,7 @@ import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whispe
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
 import { createTtsEngine } from "../../adapters/tts/edge-tts";
+import { padSilenceFile } from "../../adapters/tts/audio-pad";
 
 /** 语音转写引擎（群语音消息用：cloud→bin→py 自动选择） */
 const sttEngine = createWhisperCppEngine();
@@ -299,11 +300,14 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
       );
       if (made !== null) {
+        // 末尾垫 0.5 秒静音：防 QQ 播放器把尾音截掉
+        const padded = await padSilenceFile(made, 0.5);
+        const sendFile = padded ?? made;
         voiceLast.set(groupId, Date.now());
         await httpPost(
           config.httpBase,
           "/send_group_msg",
-          { group_id: groupNumber, message: `[CQ:record,file=file:///${made.replace(/\\/g, "/")}]` },
+          { group_id: groupNumber, message: `[CQ:record,file=file:///${sendFile.replace(/\\/g, "/")}]` },
           config.token,
         );
         // eslint-disable-next-line no-console
