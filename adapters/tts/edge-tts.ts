@@ -62,10 +62,10 @@ export function createTtsEngine(): TtsEngine {
     return ready;
   };
 
-  const runEdge = (textFile: string, out: string, rate: string): Promise<void> =>
+  const runEdge = (textFile: string, out: string, rate: string, pitch: string): Promise<void> =>
     new Promise((resolve, reject) => {
       const script = path.join(process.cwd(), "scripts", "tts-edge.py");
-      const p = spawn(edge.python, [script, textFile, out, edge.voice, rate, edge.pitch], {
+      const p = spawn(edge.python, [script, textFile, out, edge.voice, rate, pitch], {
         stdio: ["ignore", "ignore", "pipe"],
       });
       let err = "";
@@ -91,7 +91,18 @@ export function createTtsEngine(): TtsEngine {
           const textFile = path.join(runtimeTmpDir(), `tts-text-${Date.now()}.txt`);
           fs.writeFileSync(textFile, text, "utf8");
           const rate = opts?.emotion !== undefined ? emotionRate(opts.emotion) : edge.rate;
-          await runEdge(textFile, outPath, rate);
+          try {
+            await runEdge(textFile, outPath, rate, edge.pitch);
+          } catch (firstErr) {
+            if (edge.pitch !== "+0Hz") {
+              // 音高参数被拒时自动重试默认音高（NoAudioReceived 常见于此）
+              // eslint-disable-next-line no-console
+              console.warn(`[tts] Edge 带音高失败，重试默认音高：${firstErr instanceof Error ? firstErr.message.slice(0, 120) : ""}`);
+              await runEdge(textFile, outPath, rate, "+0Hz");
+            } else {
+              throw firstErr;
+            }
+          }
           return outPath;
         } catch (err) {
           // eslint-disable-next-line no-console
