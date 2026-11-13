@@ -1,26 +1,26 @@
 # HANDOVER — Genesis-1 交接文档
 
-> 自动生成时间：2026-11-12T20:00:08.135Z（北京时间 2026/11/13 04:00:08）
+> 自动生成时间：2026-11-13T20:00:07.390Z（北京时间 2026/11/14 04:00:07）
 > 刷新方式：`pnpm handover`（或 `node node_modules\tsx\dist\cli.mjs scripts/gen-handover.ts`）。
 > 本文件 = 下方自动快照 + docs/def/handover-notes.md 静态说明。新会话先读本文件。
 
 ## 自动快照
 
 - Node 版本：v24.22.1
-- 代码规模：core 54 个文件 / adapters 32 / tests 45 / 全仓约 222 个文件（不含 node_modules）
-- 测试用例：约 250 个（unit + e2e，含 A01a–A17 对应断言）
+- 代码规模：core 54 个文件 / adapters 35 / tests 46 / 全仓约 230 个文件（不含 node_modules）
+- 测试用例：约 254 个（unit + e2e，含 A01a–A17 对应断言）
 - 证据产物：18/18；CI 状态：CI 全绿
 
 ### 最近提交（git log -8）
 
-`bbf1cb6 fix: QQ host now distills long-term memory every N turns (matches terminal host API)`
-`2043317 fix: QQ host now distills long-term memory every N turns (was missing vs terminal host)`
-`89cb929 chore: refresh HANDOVER (daily)`
-`b17c1e0 fix: friend display name 绿/苔绿Tars (config + rules synced)`
-`cc71156 overwrite permanent layer: new persona (home/first-mes), new rules (老板/喜欢的人/星见小鹿/观察-黑名单/b站生活), remove meme-image pairing, friend config v3`
-`53946e9 content: reorganize rules — narrative order (world→life→identity→speech), tech spec moved to appendix`
-`55a2916 content: pre-reply internal check — personal memories only on trigger+motive, carried as aside, never itinerary-led`
-`4c01cf4 fix: remove stray tmpdir rm line from test`
+`c73f17c docs: add VRChat reserved-item to handover backlog`
+`69c3872 fix(voice): 质检没冤枉云端——补请求超时 + 单条时间预算，熔断改成按“整条回复”计数`
+`c4fd206 fix(voice): 加语音通道熔断——云端连续吐废产物时先纯文字，别再让每条回复干等十几秒`
+`f139423 fix(voice): 首尾听不到的真凶是云端产物残缺，不是 QQ 截断——加逐句体检 + 多变体重试，绝不发半条`
+`fcad6a5 docs: session handover file for next conversation`
+`f74435b voice final: resample slow-down (zero artifacts, pitch sinks), remove all Edge remnants, cloud-clone only`
+`0e825ee tune: tempo 0.85 + wider PV analysis window (2048/512) to reduce metallic artifacts`
+`f768070 fix: atempo output frame count`
 
 ### 本地 Ollama 模型
 
