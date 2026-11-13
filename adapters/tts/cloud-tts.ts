@@ -68,7 +68,8 @@ export function createCloudTts(): CloudTts {
         return null;
       }
       try {
-        const input = opts?.emotionHint !== undefined ? `${opts.emotionHint}<|endofprompt|>${text}` : text;
+        // 注意：情绪指令前缀在部分模型上会被当成正文念出来——云端路径不再加指令，只合成纯文本
+        const input = text;
         const res = await fetch(`${config.baseUrl}/audio/speech`, {
           method: "POST",
           headers: {

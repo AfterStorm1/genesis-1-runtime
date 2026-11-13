@@ -49,6 +49,7 @@ export function createTtsEngine(): TtsEngine {
   const edge = resolveEdgeTtsConfig();
   const cloud = createCloudTts();
   let ready: Promise<boolean> | null = null;
+  let logged = false;
 
   const ensureReady = (): Promise<boolean> => {
     if (ready === null) {
@@ -81,6 +82,11 @@ export function createTtsEngine(): TtsEngine {
   return {
     async synthesizeToFile(text: string, outPath: string, opts?: { emotion?: string }): Promise<string | null> {
       if (await ensureReady()) {
+        if (!logged) {
+          logged = true;
+          // eslint-disable-next-line no-console
+          console.log("[tts] Edge 引擎就绪（微软免费语音）");
+        }
         try {
           const textFile = path.join(runtimeTmpDir(), `tts-text-${Date.now()}.txt`);
           fs.writeFileSync(textFile, text, "utf8");
@@ -91,12 +97,12 @@ export function createTtsEngine(): TtsEngine {
           // eslint-disable-next-line no-console
           console.warn(`[tts] Edge 合成失败，落回云端：${err instanceof Error ? err.message : String(err)}`);
         }
+      } else if (!logged) {
+        logged = true;
+        // eslint-disable-next-line no-console
+        console.warn("[tts] Edge 不可用，使用云端兜底。装 Edge：tools\\whisper-py\\Scripts\\python.exe -m pip install edge-tts -i https://pypi.tuna.tsinghua.edu.cn/simple");
       }
-      return cloud.synthesizeToFile(
-        text,
-        outPath,
-        opts?.emotion !== undefined ? { emotionHint: emotionHint(opts.emotion) } : undefined,
-      );
+      return cloud.synthesizeToFile(text, outPath);
     },
   };
 }
