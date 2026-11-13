@@ -48,8 +48,29 @@ export interface TtsEngine {
 export function createTtsEngine(): TtsEngine {
   const edge = resolveEdgeTtsConfig();
   const cloud = createCloudTts();
+  const forced = process.env.TTS_ENGINE ?? "edge"; // edge | cloud | off
   let ready: Promise<boolean> | null = null;
   let logged = false;
+
+  if (forced === "cloud") {
+    if (!logged) {
+      logged = true;
+      // eslint-disable-next-line no-console
+      console.log("[tts] TTS_ENGINE=cloud：直走云端（GPT-SoVITS/CosyVoice + 克隆音色）");
+    }
+    return {
+      async synthesizeToFile(text, outPath) {
+        return cloud.synthesizeToFile(text, outPath);
+      },
+    };
+  }
+  if (forced === "off") {
+    return {
+      async synthesizeToFile() {
+        return null;
+      },
+    };
+  }
 
   const ensureReady = (): Promise<boolean> => {
     if (ready === null) {
