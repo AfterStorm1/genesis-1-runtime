@@ -253,6 +253,15 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
 
   /** 回复发送：对老板/喜欢的人可用语音（TTS，短句），失败/不满足时落回文字 */
   const voiceLast = new Map<string, number>();
+  /** 语音前剥掉命令样内容（set/rem 行、TTS_ 配置字样），防止把配置命令念出来 */
+  const spokenSafe = (text: string): string =>
+    text
+      .split(/\n/)
+      .filter((l) => !/^\s*(set|rem)\s/i.test(l))
+      .join(" ")
+      .replace(/TTS_[A-Z_]+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
   const sendReply = async (groupId: string, groupNumber: number | undefined, chat: ChatRuntime, flat: string, isTrusted: boolean): Promise<void> => {
     const wantVoice =
       config.qqVoiceReply.enabled && isTrusted && flat.length <= 120 && (Date.now() - (voiceLast.get(groupId) ?? 0) >= config.qqVoiceReply.cooldownMs);
@@ -260,7 +269,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const out = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}.mp3`);
       // 语音跟着她的心情走：情绪状态 → 语气/语速（Edge 用语速模拟，云端用语气指令）
       const made = await tts.synthesizeToFile(
-        flat,
+        spokenSafe(flat),
         out,
         chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
       );
