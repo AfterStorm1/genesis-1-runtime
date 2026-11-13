@@ -86,6 +86,7 @@ core（骨架，不动）→ composition（装配）→ layers（默认实现）
 4. （可选）高质量素材重克隆，改善音质
 5. （可选）B 站 v2：礼物/大航海事件（WS 协议 bilibili-live-ws）、主播声音转写（FLV 抓流+持续 STT）
 6. （可选）GPT-SoVITS 云端模型切换：TTS_CLOUD_MODEL 换模型名测试
+7. （预留，未实现）**VRChat 宿主**：原契约的 Live2D/VRChat 方向只有 Renderer/Hook 接口插槽，从未实现真实连接。若要接：新建 hosts/vrc-host——情绪状态机 → OSC（vrc_osc 参数：表情/手势）→ 模型；语音用现有克隆音色 TTS 经虚拟声卡当麦克风；模型参数反馈回情绪状态机。LLM/TTS/情绪全部现成，缺的是宿主壳
 
 
 ## 八、踩坑速查（编码/环境）
