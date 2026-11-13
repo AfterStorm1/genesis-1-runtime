@@ -262,6 +262,12 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
         return last === "？" || last === "?" || last === "！" || last === "!" || last === "…" ? s : `${s}。`;
       })
       .join("");
+  /** 偶尔开头打个顿（“嗯……”）——一点点不完美更像真人；QQ_HESITATION_RATE 可调，0 关闭 */
+  const withHesitation = (spoken: string): string => {
+    const rate = Number(process.env.QQ_HESITATION_RATE ?? 0.12);
+    if (rate > 0 && spoken.length >= 6 && Math.random() < rate) return `嗯……${spoken}`;
+    return spoken;
+  };
 
   /** 回复发送：对老板/喜欢的人可用语音（TTS，短句），失败/不满足时落回文字 */
   const voiceLast = new Map<string, number>();
@@ -295,7 +301,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const out = path.join(runtimeTmpDir(), `qq-voice-${Date.now()}.mp3`);
       // 语音跟着她的心情走：情绪状态 → 语气/语速（Edge 用语速模拟，云端用语气指令）
       const made = await tts.synthesizeToFile(
-        forTts(spoken),
+        withHesitation(forTts(spoken)),
         out,
         chat.emotion !== undefined ? { emotion: chat.emotion.state().emotion } : undefined,
       );
