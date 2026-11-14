@@ -7,7 +7,8 @@
 
 ```
 config/persona/<名字>.persona.json   人格卡（人设/性格/场景/开场白/对话示范）← 最核心
-config/world/rules.example.md        世界观/任务/对话偏向规则文件模板
+config/world/rules.skeleton.md       世界观/任务/对话偏向规则文件（默认，待填）
+config/world/rules.example.md        规则文件格式示例
 llm-config.cmd                       在线 API key + 模型（不入 git，仅本机）
 data/chat-history/                   记忆文件（自动生成，勿手改）
 ──────────────────────────────────────────────
@@ -44,7 +45,7 @@ data/chat-history/                   记忆文件（自动生成，勿手改）
 | 注入口 | 适合写什么 | 怎么设置 |
 |---|---|---|
 | ① 人格卡 `scenario`+`description` | 与角色强绑定的世界观与关系 | 改 JSON |
-| ② **规则文件**（推荐） | 世界观事实、任务目标、风格硬规则、红线 | 参考 `config/world/rules.example.md`，改好后 `set CHAT_WORLD_RULES=你的文件路径` |
+| ② **规则文件**（推荐） | 世界观事实、任务目标、风格硬规则、红线 | 默认 `config/world/rules.skeleton.md`（格式参考 `rules.example.md`），改好后 `set CHAT_WORLD_RULES=你的文件路径` |
 | ③ 环境变量文本 | 临时追加一条规则 | `set CHAT_EXTRA_SYSTEM=今天你心情很好` |
 
 注入顺序（后写的优先级高）：人格卡 → CHAT_WORLD_RULES 文件 → CHAT_EXTRA_SYSTEM。

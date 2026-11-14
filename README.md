@@ -17,7 +17,7 @@
 - `tests/` —— A01a–A17 对应单测与 e2e
 - `scripts/` —— VALIDATE_AT 扫描、payload 形状报告、基准、证据汇总
 - `docs/evidence/` —— 证据产物（本地 pass / CI pending）
-- `docs/def/` —— 偏差清单与待确认类型清单
+- `docs/def/` —— 功能清单矩阵、偏差清单、待确认类型清单、架构索引、配置指南
 - `main.ts` —— 最小 demo（12 步 e2e，输出 `docs/evidence/e2e-minimal.log`）
 
 ## 运行
@@ -38,7 +38,7 @@ pnpm demo             # 直接跑 main.ts（12 步 e2e + 写 log）
 
 > 本机验证记录：本会话交付时，本机 pnpm 的网络栈对 npm 仓库直连报 WSAEACCES(10013)
 > （与 Hyper-V 端口保留区间重叠有关），最终用 `npm install --registry=https://registry.npmjs.org`
-> 安装，并以 `verify.cmd`（依次执行 typecheck / 单测 / e2e / 扫描 / 基准 / demo，结果写入
+> 安装，并以 `verify.cmd`（本地 10 步复验：typecheck / 单测 / e2e / 扫描×2 / 基准×2 / 证据 / demo / 交接，结果写入
 > `docs/evidence/verify.log`）完成本地复验，全部通过（local pass）。
 > GitHub Actions CI（.github/workflows/ci.yml，5 jobs）已全绿，见
 > `docs/evidence/ci-status.md`。正常环境直接用上方 pnpm 脚本即可。
@@ -90,6 +90,7 @@ chat.cmd
 
 > 全系统「查什么看哪里」索引见 [`docs/def/architecture.md`](docs/def/architecture.md)。
 > **人工配置（人格/世界观/任务/对话偏向/模型/记忆参数）全指南见 [`docs/def/manual-config-guide.md`](docs/def/manual-config-guide.md)。**
+> **功能清单（功能/状态/档位/实现位置/开关）唯一矩阵见 [`docs/def/features.md`](docs/def/features.md)。**
 
 ## 加 Renderer
 

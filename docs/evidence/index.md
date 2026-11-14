@@ -27,3 +27,5 @@
 
 全部 18 个产物已生成。
 
+另：每周自检报告 `weekly-check-latest.md` + 归档 `weekly-check-<时间戳>.md`（由 `weekly-check.cmd` 生成，不入本表）。
+

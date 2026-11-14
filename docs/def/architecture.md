@@ -45,6 +45,7 @@ InputBus.inject(user_message)
 | 查「dispose 顺序/装配顺序」 | `composition/composition-root.ts` | — |
 | 查「验收标准/证据」 | `docs/evidence/`（A01a–A17 + ci-status.md） | — |
 | 查「已知偏差/待确认」 | `docs/def/deviations.md` / `docs/def/pending-types.md` | — |
+| 查「功能清单/状态」 | `docs/def/features.md`（唯一矩阵） | — |
 
 ## 3. 目录地图
 
@@ -82,10 +83,10 @@ runtime/
 ├── main.ts                   12 步 e2e demo（A14）
 ├── demo-chat.ts              聊天入口薄壳（再导出 hosts/chat-host/；chat.cmd 调用它）
 ├── chat.cmd / verify.cmd / weekly-check.cmd   一键聊天 / 一键复验 / 每周自检
-├── tests/                    35+ 测试文件（A01a–A17 映射见各文件头注释）
+├── tests/                    46 测试文件（A01a–A17 映射见各文件头注释；数量以 docs/HANDOVER.md 自动快照为准）
 ├── scripts/                  scan-validate-at / payload-shape / bench ×2 / gen-evidence
 │                             gen-handover（交接文档）/ weekly-check（每周自检）/ diag-stt
-└── docs/def/ docs/evidence/  deviations / pending-types / architecture / manual-config-guide / 证据产物
+└── docs/def/ docs/evidence/  features / deviations / pending-types / architecture / manual-config-guide / 证据产物
 ```
 
 ## 4. 扩展配方（常用四例）

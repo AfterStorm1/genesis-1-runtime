@@ -45,37 +45,30 @@ core（骨架，不动）→ composition（装配）→ layers（默认实现）
 
 记忆三层（都在 `adapters/llm/memory/`）：轮次历史 `CHAT_MAX_TURNS=10`、长期事实（重要度×时间衰减，50 条、TTL 30 天）、第一人称感受（强度逐日衰减）。摘要器每 `CHAT_SUMMARY_EVERY` 轮跑一次。
 
-## 四、功能清单（重置后仍全部可用）
+## 四、功能清单（唯一权威见 docs/def/features.md）
 
-| 功能 | 状态 |
-|---|---|
-| 触发：消息含触发词/@/引用 | ✅（触发词现在默认 `bot`，需在 llm-config 里改） |
-| 语音转写：老板/喜欢的人随时；普通群友需先触发（60s 窗口） | ✅ 代码在，但**名单已清空 → 谁都不算 trusted** |
-| 她发语音：仅老板/喜欢的人、≤120 字、60s 冷却 | ✅ 同上，需填名单才触发 |
-| 图片识别（NapCat get_image → 视觉模型） | ✅ |
-| 观察区域/黑名单：冒犯词→观察，3 次拉黑（!reset 清） | ✅ |
-| boss 指令 !reset/!clear/!status | ✅（需填 `QQ_OWNER_IDS`） |
-| 好友每日首次主动打招呼 | ✅（需填 `QQ_FRIEND_IDS`） |
-| 颜文字随机句尾 | ✅（`QQ_KAOMOJI`） |
-| 长期记忆：每 N 回合提炼 | ✅ |
-| B 站弹幕机器人 v1（HTTP 轮询 gethistory + msg/send） | ✅；v2（礼物/主播语音）未做 |
-| 工具调用（ToolRegistry / CognitionOutput.tool_call） | ⚠️ 契约在，**没接线**：一个工具都没注册，也没人执行 tool_call |
-| Live2D / VRChat 渲染 | ⚠️ 只有 `adapters/renderers/empty-vrchat-renderer.ts` 空实现 |
+功能/状态/档位/实现位置/开关的**唯一矩阵**已迁至 [`docs/def/features.md`](def/features.md)，此处不再重复维护。
+本节原 13 行功能表已于 2026-11-14 并入该矩阵；重置后状态以矩阵「状态」列为准。
 
-## 五、语音管线（2026-11-14 加固版）
+## 五、语音管线（2026-11-14 加固版；新增 Fish Audio 表演标签引擎）
 
 ```
-台词 → 剥动作/命令 → 逐句切分补句读 → 每句云端合成（音色由 TTS_CLOUD_VOICE 决定，原速）
+台词 → 剥动作/命令 → 表演标签感知切句（`[息を吸う]` 粘在它后面那句上）→ 每句合成
 → 逐句体检（空文件/纯静音/有效语音过短 → 换变体重试；尾部硬切 → 优先选有收尾的那版）
 → 拼接（句间 0.4s，统一 24000Hz）→ 重采样慢放（QQ_TTS_TEMPO；≥0.995 跳过）
 → 头垫 0.3s + 尾垫 0.8s + 峰值归一 0.8 → 发送
 任何一句不合格 → 整条落回文字（绝不发半条）；连续 3 条拿不到语音 → 熔断 5 分钟纯文字
+文字显示会把 `[...]` 表演标签剥掉（标签只给 TTS 看）
 ```
 
-- 引擎：`TTS_ENGINE=cloud`（SiliconFlow `/audio/speech`）；`TTS_CLOUD_VOICE` 现在**为空** → 回落内置 `FunAudioLLM/CosyVoice2-0.5B:claire`
-- 克隆音色：`clone-voice.cmd` 上传参考音频（`data/tmp/voice-ref.txt` 是参考文本）→ 得到 `speech:xxx:yyy:zzz` → 填进 `TTS_CLOUD_VOICE`
-- 参数：`QQ_TTS_TEMPO`、`QQ_TTS_GAP=0.4`、`QQ_HESITATION_RATE`（默认 0.12，打顿"嗯，"）、`TTS_CLOUD_SPEED`、`QQ_TTS_LEAD=0.3`、`QQ_TTS_TAIL=0.8`、`QQ_TTS_PEAK=0.8`、`QQ_TTS_TRIES=4`、`QQ_TTS_BUDGET_MS=20000`、`QQ_TTS_BREAKER=3`、`QQ_TTS_BREAKER_MS=300000`、`TTS_CLOUD_TIMEOUT_MS=15000`
+- 引擎：`TTS_ENGINE=cloud`（SiliconFlow `/audio/speech`）| `fish`（Fish Audio `/v1/tts`：模型走**请求头** `model`，音色走 `reference_id`）| `off`
+- Fish 配置：`FISH_API_KEY`、`FISH_REFERENCE_ID`、`FISH_MODEL=drama-3`；可选 `FISH_BASE_URL` / `FISH_TTS_PATH` / `FISH_FORMAT` / `FISH_REQUEST_EXTRA`（JSON，追加任意字段）
+- 日语元气少女人设：`config/persona/ja-anime.persona.json` + `config/world/rules.ja-anime.md`；启用步骤与验收见 [`docs/def/ja-anime-voice.md`](def/ja-anime-voice.md)
+- 硅基克隆音色：`clone-voice.cmd` 上传参考音频（`data/tmp/voice-ref.txt` 是参考文本）→ 得到 `speech:xxx:yyy:zzz` → 填进 `TTS_CLOUD_VOICE`
+- 参数：`QQ_TTS_TEMPO`、`QQ_TTS_GAP=0.4`、`QQ_HESITATION_RATE`（默认 0.12；日语台词或带标签时自动跳过）、`TTS_CLOUD_SPEED`、`QQ_TTS_LEAD=0.3`、`QQ_TTS_TAIL=0.8`、`QQ_TTS_PEAK=0.8`、`QQ_TTS_TRIES=4`、`QQ_TTS_BUDGET_MS=20000`、`QQ_TTS_BREAKER=3`、`QQ_TTS_BREAKER_MS=300000`、`TTS_CLOUD_TIMEOUT_MS=15000`
 - 质量门脚本：`scripts/audio-inspect.py`（时长/峰值/首尾静音/有效语音跨度，输出 JSON）
+- 表演标签工具：`adapters/llm/performance-tags.ts`（切句/剥标签/可念字数；单测 `tests/unit/performance-tags.test.ts`）
+- 冒烟测试：`tts-test.cmd "<日语带标签的台词>"`（新台词直接当参数传）
 
 ## 六、已知问题与取舍
 
