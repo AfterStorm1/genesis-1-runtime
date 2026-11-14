@@ -25,13 +25,13 @@ data/chat-history/                   记忆文件（自动生成，勿手改）
 
 | 字段 | 写什么 | 写法示例 |
 |---|---|---|
-| `name` | 角色名（决定记忆文件名） | `"Kaguya"` |
-| `description` | 身份与来历（世界观里「她是谁」） | `"月面移民，旧京第三图书馆夜班管理员"` |
-| `personality` | **说话风格**：长短句、口头禅、喜恶、脾气 | `"寡言但句句有分量，喜欢用比喻，从不打断人"` |
-| `scenario` | 当前场景与你和她的关系 | `"深夜图书馆，你是认识了三个月的常客"` |
-| `first_mes` | 开场白（定调） | `"……你来了。今晚想读什么？"` |
-| `mes_example` | **对话示范**（1~2 条一问一答，小模型照猫画虎，效果最大） | `"用户：无聊吗？\nKaguya：有书有月光，还有你。不算。"` |
-| `tags` | 分类标签（暂不参与逻辑） | `["demo","kaguya"]` |
+| `name` | 角色名（决定记忆文件名，建议 ASCII） | `"skeleton"` |
+| `description` | 身份与来历（世界观里「她是谁」） | `"占位：身份与来历"` |
+| `personality` | **说话风格**：长短句、口头禅、喜恶、脾气 | `"占位：寡言、句句有分量"` |
+| `scenario` | 当前场景与你和她的关系 | `"占位：场景与关系"` |
+| `first_mes` | 开场白（定调） | `"占位：第一句话"` |
+| `mes_example` | **对话示范**（1~2 条一问一答，小模型照猫画虎，效果最大） | `"用户：在吗\n角色：在。"` |
+| `tags` | 分类标签（暂不参与逻辑） | `["skeleton","todo"]` |
 | `extensions` | 预留扩展（世界书等，暂未实现） | `{}` |
 
 **用法**：复制 `example.persona.json` → 改名 → 编辑 → `set GENESIS_PERSONA=config\persona\xxx.json` → `chat.cmd`。
@@ -63,8 +63,8 @@ rem 本地模式（key 留空时生效）
 rem set "OLLAMA_MODEL=qwen3:8b"
 rem set "OLLAMA_BASE_URL=http://localhost:11434"
 rem 固定人格与规则（可选）
-rem set "GENESIS_PERSONA=config\persona\kaguya.persona.json"
-rem set "CHAT_WORLD_RULES=config\world\hui-rules.md"
+rem set "GENESIS_PERSONA=config\persona\skeleton.persona.json"
+rem set "CHAT_WORLD_RULES=config\world\rules.skeleton.md"
 ```
 
 - key 为空 → 自动用本地 Ollama（`ollama pull <模型名>` 增装新模型）；

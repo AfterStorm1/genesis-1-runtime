@@ -13,8 +13,8 @@ import { loadPersona } from "../layers/l1-persona/persona-loader";
 
 const ROOT = path.resolve(process.cwd());
 const EVID = path.join(ROOT, "docs", "evidence", "persona-descope");
-const RULES_FILE = path.join(ROOT, "config", "world", "hui-rules.md");
-const PERSONA_FILE = path.join(ROOT, "config", "persona", "hui.persona.json");
+const RULES_FILE = path.join(ROOT, "config", "world", "rules.skeleton.md");
+const PERSONA_FILE = path.join(ROOT, "config", "persona", "skeleton.persona.json");
 const SAMPLES_FILE = path.join(ROOT, "config", "reactions", "samples.json");
 
 // 工作拉回词（V1 双面判定的负面表）
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
   const now = new Date();
   const ts = now.toISOString().slice(0, 19).replace(/[:T]/g, "-");
   const md: string[] = [
-    "# 蕙 · 去工作场景依赖 验收报告",
+    "# Genesis-1 · 去工作场景依赖 验收报告",
     "",
     `- 时间：${now.toISOString()}（北京时间 ${now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}）`,
     `- 结论：**${verdict}**`,

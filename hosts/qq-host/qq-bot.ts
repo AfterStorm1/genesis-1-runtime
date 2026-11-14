@@ -55,7 +55,7 @@ export interface QqBotConfig {
   friendIds: Set<string>;
   /** 好朋友昵称映射（QQ_FRIEND_NAMES，格式 qq:名字,qq:名字） */
   friendNames: Map<string, string>;
-  /** 触发词（无 @ 时以此开头触发），默认“蕙” */
+  /** 触发词（无 @ 时以此开头触发）：由 QQ_TRIGGER 指定，未配置时用占位符 "bot" */
   trigger: string;
   /** 每群冷却（毫秒），默认 3000 */
   cooldownMs: number;
@@ -98,7 +98,7 @@ export function readQqEnv(): QqBotConfig {
     ownerIds: csvSet(process.env.QQ_OWNER_IDS),
     friendIds: csvSet(process.env.QQ_FRIEND_IDS),
     friendNames: nameMap(process.env.QQ_FRIEND_NAMES),
-    trigger: process.env.QQ_TRIGGER ?? "蕙",
+    trigger: (process.env.QQ_TRIGGER ?? "").trim() || "bot",
     cooldownMs: Number(process.env.QQ_COOLDOWN_MS ?? 3000) || 3000,
     imageWindowMs: Number(process.env.QQ_IMAGE_WINDOW_MS ?? 60_000) || 60_000,
     kaomoji: {
@@ -751,7 +751,7 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
             const recent = chat.history
               .list()
               .slice(-12)
-              .map((i) => `${i.role === "user" ? "用户" : "蕙"}：${i.content}`)
+              .map((i) => `${i.role === "user" ? "用户" : "助手"}：${i.content}`)
               .join("\n");
             const { facts, feelings } = await chat.summarizer.summarize(recent);
             for (const t of facts) chat.longTerm.add(t);

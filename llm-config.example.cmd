@@ -6,7 +6,10 @@ set "LLM_API_KEY=sk-paste-your-key-here"
 set "LLM_BASE_URL=https://api.deepseek.com"
 set "LLM_MODEL=deepseek-chat"
 rem ---- optional: fix persona ----
-rem set "GENESIS_PERSONA=config\persona\kaguya.persona.json"
+rem set "GENESIS_PERSONA=config\persona\skeleton.persona.json"
+rem ---- optional: world rules / reaction samples ----
+rem set "CHAT_WORLD_RULES=config\world\rules.skeleton.md"
+rem set "CHAT_REACTION_SAMPLES=config\reactions\samples.json"
 rem ---- optional: local ollama overrides (used when LLM_API_KEY is empty) ----
 rem set "OLLAMA_MODEL=qwen3:8b"
 rem ---- optional: cloud STT (voice transcription via SiliconFlow, OpenAI-compatible) ----
@@ -17,6 +20,10 @@ rem ---- optional: QQ group bot boss (comma-separated QQ numbers; can use !reset
 rem set "QQ_OWNER_IDS=your-qq-number"
 rem ---- optional: QQ group bot close friends (recognized, no boss commands) ----
 rem set "QQ_FRIEND_IDS=friend-qq-number"
+rem ---- optional: QQ group bot trigger word (unset = placeholder "bot") ----
+rem set "QQ_TRIGGER=trigger-word"
+rem ---- optional: cloud TTS voice (clone uri or built-in model:voice) ----
+rem set "TTS_CLOUD_VOICE=FunAudioLLM/CosyVoice2-0.5B:claire"
 rem ---- optional: bilibili live danmaku bot ----
 rem set "BILI_ROOM_ID=????"
 rem set "BILI_COOKIE=???????Cookie(?bili_jct????????????)"

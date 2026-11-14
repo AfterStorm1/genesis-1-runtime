@@ -5,15 +5,15 @@ import { writeEvidenceLog } from "../helpers/evidence";
 
 describe("bili danmaku bot", () => {
   it("shouldReplyDanmaku：包含触发词才回复", () => {
-    expect(shouldReplyDanmaku("蕙 晚上好", "蕙")).toBe(true);
-    expect(shouldReplyDanmaku("主播好厉害", "蕙")).toBe(false);
+    expect(shouldReplyDanmaku("bot 晚上好", "bot")).toBe(true);
+    expect(shouldReplyDanmaku("主播好厉害", "bot")).toBe(false);
   });
 
   it("parseDanmakuList：解析 gethistory 响应，过滤空文本", () => {
     const raw = {
       data: {
         room: [
-          { text: "蕙 在吗", nickname: "小水", uid: 123, timeline: "2026-11-12 20:00:00" },
+          { text: "bot 在吗", nickname: "小水", uid: 123, timeline: "2026-11-12 20:00:00" },
           { text: "", nickname: "空", uid: 0, timeline: "2026-11-12 20:00:01" },
           { text: "无时间戳", nickname: "某", uid: 9 },
         ],
@@ -21,7 +21,7 @@ describe("bili danmaku bot", () => {
     };
     const list = parseDanmakuList(raw);
     expect(list).toHaveLength(2);
-    expect(list[0]).toEqual({ text: "蕙 在吗", nickname: "小水", uid: 123, timeline: "2026-11-12 20:00:00" });
+    expect(list[0]).toEqual({ text: "bot 在吗", nickname: "小水", uid: 123, timeline: "2026-11-12 20:00:00" });
   });
 
   it("extractBiliJct：从 cookie 提取 csrf 凭据", () => {

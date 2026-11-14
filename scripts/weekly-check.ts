@@ -14,7 +14,7 @@ import type { PersonaCardV3 } from "../core/contract/persona";
 
 const ROOT = path.resolve(process.cwd());
 const EVID = path.join(ROOT, "docs", "evidence");
-const RULES_FILE = path.join(ROOT, "config", "world", "hui-rules.md");
+const RULES_FILE = path.join(ROOT, "config", "world", "rules.skeleton.md");
 const SAMPLES_FILE = path.join(ROOT, "config", "reactions", "samples.json");
 const HISTORY_DIR = process.env.CHAT_HISTORY_DIR ?? path.join(ROOT, "data", "chat-history");
 
@@ -117,7 +117,7 @@ async function main(): Promise<void> {
       persona = loadPersona(
         process.env.GENESIS_PERSONA !== undefined
           ? path.resolve(process.env.GENESIS_PERSONA)
-          : path.join(ROOT, "config", "persona", "hui.persona.json"),
+          : path.join(ROOT, "config", "persona", "skeleton.persona.json"),
       );
     } catch (err) {
       return { status: "FAIL", detail: `人格卡加载失败：${err instanceof Error ? err.message : String(err)}` };
@@ -136,7 +136,7 @@ async function main(): Promise<void> {
   // 5. 终止钩子本地验证（硬）
   add("termination-guard", true, () => {
     const guard = createTerminationHook();
-    const persona = loadPersona(path.join(ROOT, "config", "persona", "hui.persona.json"));
+    const persona = loadPersona(path.join(ROOT, "config", "persona", "skeleton.persona.json"));
     const banned = { contractVersion: "1.0.0", kind: "user_message", text: "你真是个废物", persona } as never;
     const run = (p: unknown): unknown => (guard.process as (x: unknown) => unknown)(p);
     if (run(banned) !== null || !guard.terminated) {
@@ -169,7 +169,7 @@ async function main(): Promise<void> {
     const { samples } = loadReactionSamples(SAMPLES_FILE);
     const llmSamples = samples.filter((s) => s.localOnly !== true);
     if (llmSamples.length === 0) return { status: "SKIP", detail: "无可评测样本" };
-    const persona = loadPersona(path.join(ROOT, "config", "persona", "hui.persona.json"));
+    const persona = loadPersona(path.join(ROOT, "config", "persona", "skeleton.persona.json"));
     const rules = fs.existsSync(RULES_FILE) ? fs.readFileSync(RULES_FILE, "utf8") : undefined;
     const system = buildSystemPrompt(persona, rules);
     let pass = 0;

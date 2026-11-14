@@ -48,7 +48,7 @@ export async function runChatLoop(chat: ChatRuntime): Promise<void> {
       const intent = await chat.emotion.tick();
       if (intent !== null) {
         // eslint-disable-next-line no-console
-        console.log("\n[自主] 情绪波动，蕙想说话……");
+        console.log("\n[自主] 情绪波动，角色想说话……");
         await chat.rt.pipeline.handleInput({
           contractVersion: COGNITION_CONTRACT_VERSION,
           kind: "drive_intent",

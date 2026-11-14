@@ -10,7 +10,7 @@
 | typecheck | PASS | 硬 | ok |
 | unit-tests | PASS | 硬 |    Start at  18:52:32 /    Duration  7.22s (transform 4.73s, setup 0ms, collect 16.10s, tests 1.70s, environment 10ms, prepare 22.23s) |
 | e2e-tests | PASS | 硬 |    Start at  18:52:41 /    Duration  1.70s (transform 366ms, setup 0ms, collect 578ms, tests 47ms, environment 0ms, prepare 395ms) |
-| config-integrity | PASS | 硬 | 人格 蕙 + 规则 + 样本 15 条 |
+| config-integrity | PASS | 硬 | 人格卡 + 规则 + 样本（已重置为骨架） |
 | termination-guard | PASS | 硬 | 越界→永久终止→只回连接中断... |
 | memory-health | PASS | 软 | 3 个文件，27 行，坏行 0 |
 | git-status | PASS | 软 | 工作区干净 |

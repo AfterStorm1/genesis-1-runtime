@@ -23,10 +23,10 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 4. 在线 LLM：`llm-config.cmd`（已被 git 忽略）保存 key，模板见 `llm-config.example.cmd`；
    环境变量优先级：LLM_API_KEY 存在即在线（LLM_BASE_URL/LLM_MODEL），否则本地（OLLAMA_*）。
 5. 聊天数据：`data/chat-history/`（每角色一个 .jsonl + .longterm.jsonl），已被 git 忽略。
-6. 一键入口：`chat.cmd`（聊天，默认人格「蕙」+ 默认规则 hui-rules.md）、`verify.cmd`（本地 10 步复验，含刷新 HANDOVER.md）。
+6. 一键入口：`chat.cmd`（聊天，默认人格骨架 `config/persona/skeleton.persona.json` + 默认规则 `config/world/rules.skeleton.md`）、`verify.cmd`（本地 10 步复验，含刷新 HANDOVER.md）。
 7. 人工配置：人格/世界观/任务/对话偏向/模型/记忆参数全部入口见 `docs/def/manual-config-guide.md`；
    新增可配项：CHAT_WORLD_RULES（规则文件）、CHAT_EXTRA_SYSTEM（追加规则）、CHAT_TEMPERATURE。
-8. 主角「蕙」已录入：人格卡 `config/persona/hui.persona.json`、规则 `config/world/hui-rules.md`；
+8. 人格与规则已重置为骨架：人格卡 `config/persona/skeleton.persona.json`、规则 `config/world/rules.skeleton.md`（待填）；
    语言过滤表后处理 `adapters/llm/speech-postprocess.ts`（不进 prompt）；最高优先级终止规则
    `adapters/safety-guard/termination-hook.ts`（PipelineHook 输入侧强制，越界后永久只回“连接中断...”）。
 9. 流式输出（渲染层）：`adapters/llm/speech-segmenter.ts` 切分 + `adapters/renderers/streaming-text-renderer.ts`
@@ -43,9 +43,9 @@ Genesis-1 角色运行时骨架（契约候选 v1.0.0-rc.5）：骨架定「今�
 14. 反应样本库 + 每周自检：`config/reactions/samples.json`（15 条：12 工作/通用 + 3 生活面，作为语气校准
     few-shot 注入 + 自检题集）；`weekly-check.cmd` 跑 9 步自检，报告固定在 `docs/evidence/weekly-check-latest.md`
     （已设每周一 09:00 自动执行）。反应评测为关键词级粗评。
-15. 人格去工作场景依赖：规则文件顶部「场景框架」元指令 + 「生活面」节（住处=旧京老城区小公寓、
-    旧书铺老板/隔壁老奶奶两个工作外关系，已填）+ 「非工作场景」规则节；工作规则降入「可选场景」节。
-    验收：`scripts/check-descope.ts`（V1-V3，报告 docs/evidence/persona-descope/）；V4 回归 = weekly-check。
+15. 人格去工作场景依赖（历史记录，随 2026-11-14 重置一并清空）：规则文件顶部「场景框架」元指令 +
+    「生活面」节 + 「非工作场景」规则节；工作规则降入「可选场景」节。
+    验收脚本仍在：`scripts/check-descope.ts`（V1-V3，报告 docs/evidence/persona-descope/）；V4 回归 = weekly-check。
 16. QQ 群机器人宿主（值级）：`hosts/qq-host/qq-bot.ts`（OneBot 11 正向 WS，适配 NapCatQQ；每群独立运行时
     记忆隔离、@或触发词应答、冷却防刷、群聊关 TTS/流式）；`qq-chat.cmd` 启动；ChatRuntimeOptions 增加
     historyDir/tts/stream/emotion 覆盖。⚠️ 非官方协议有封号风险，建议专用小号。

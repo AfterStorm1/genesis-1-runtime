@@ -7,7 +7,7 @@ import type { CognitionInput } from "../../core/contract/cognition";
 import { samplePersona } from "../helpers/fixtures";
 import { writeEvidenceLog } from "../helpers/evidence";
 
-const persona = samplePersona("蕙");
+const persona = samplePersona("测试角色");
 
 function userMsg(text: string): CognitionInput {
   return { contractVersion: COGNITION_CONTRACT_VERSION, kind: "user_message", text, persona };

@@ -1,5 +1,5 @@
 // Genesis-1 · Bilibili 直播间弹幕机器人（值级）
-// v1：HTTP 轮询弹幕（gethistory 接口）→ 触发词（默认「蕙」）→ 本地运行时回复 → msg/send 发弹幕（需 BILI_COOKIE）。
+// v1：HTTP 轮询弹幕（gethistory 接口）→ 触发词（BILI_TRIGGER，未配置时占位「bot」）→ 本地运行时回复 → msg/send 发弹幕（需 BILI_COOKIE）。
 // v2（路线图）：礼物/大航海事件（需 WS 协议）、主播声音转写（FLV 流抓取 + 持续 STT）。
 import fs from "node:fs";
 import path from "node:path";
@@ -28,7 +28,7 @@ export function readBiliEnv(): BiliConfig {
   return {
     roomId: process.env.BILI_ROOM_ID ?? "",
     cookie: cookie !== undefined && cookie !== "" ? cookie : undefined,
-    trigger: process.env.BILI_TRIGGER ?? "蕙",
+    trigger: (process.env.BILI_TRIGGER ?? "").trim() || "bot",
     pollMs: Number(process.env.BILI_POLL_MS ?? 4000) || 4000,
     cooldownMs: Number(process.env.BILI_COOLDOWN_MS ?? 5000) || 5000,
     historyDir: process.env.CHAT_HISTORY_DIR ?? path.join(process.cwd(), "data", "chat-history"),

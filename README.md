@@ -50,7 +50,7 @@ pnpm demo             # 直接跑 main.ts（12 步 e2e + 写 log）
 3. 其他装配数据（renderers / parameters / tools）不变。**不改 core/contract/。**
 
 ```cmd
-set GENESIS_PERSONA=config\persona\kaguya.persona.json
+set GENESIS_PERSONA=config\persona\skeleton.persona.json
 node node_modules\tsx\dist\cli.mjs main.ts
 ```
 
@@ -71,7 +71,7 @@ node node_modules\tsx\dist\cli.mjs main.ts
 
 ```cmd
 ollama pull qwen2.5:7b          # 首次需下载模型（约 4.7GB）
-chat.cmd                        # 默认 Kaguya 人格；chat.cmd example 用示例人格
+chat.cmd                        # 默认骨架人格（skeleton）；chat.cmd example 用示例人格
 ```
 
 **在线模式（设置 LLM_API_KEY 后自动切换）：**

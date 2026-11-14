@@ -26,8 +26,8 @@ try:
 except Exception:
     pass  # 若未来不再需要，静默跳过
 
-# 词表偏置：把人设常用词写进 initial_prompt，减少同音字错误（如 蕙→会）
-INITIAL_PROMPT = "简体中文普通话对话。常见人名与词：蕙、旧书铺、河边、做饭、修东西、坐吧、谢谢、不清楚、加班。"
+# 词表偏置：把常用词写进 initial_prompt，减少同音字错误（角色名/口头禅可自行补进去）
+INITIAL_PROMPT = "简体中文普通话对话。"
 
 
 def _transcribe_kwargs() -> dict:

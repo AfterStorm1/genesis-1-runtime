@@ -76,8 +76,8 @@ runtime/
 ├── hosts/                    ★聊天宿主（2026-11 架构整理新增；组装与循环分离）
 │   └── chat-host/            chat-env（配置集中读取）/ memory-assembly（记忆装配）
 │                             chat-runtime（createChatRuntime+sendUserMessage）/ chat-loop（终端循环）
-├── config/persona/           人格卡（example / kaguya / hui）
-├── config/world/             规则文件（rules.example / hui-rules）
+├── config/persona/           人格卡（skeleton 默认 / example 格式示例）
+├── config/world/             规则文件（rules.skeleton 默认 / rules.example 格式示例）
 ├── config/reactions/         反应样本库（few-shot + 自检题集）
 ├── main.ts                   12 步 e2e demo（A14）
 ├── demo-chat.ts              聊天入口薄壳（再导出 hosts/chat-host/；chat.cmd 调用它）

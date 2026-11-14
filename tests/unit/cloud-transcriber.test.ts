@@ -42,12 +42,12 @@ describe("cloud transcriber", () => {
       "fetch",
       vi.fn(async (url: string, init?: RequestInit) => {
         calls.push({ url: String(url), method: init?.method ?? "", auth: String((init?.headers as Record<string, string>)?.Authorization ?? "") });
-        return new Response(JSON.stringify({ text: " 你好，我是蕙 " }), { status: 200 });
+        return new Response(JSON.stringify({ text: " 你好，我是测试角色 " }), { status: 200 });
       }),
     );
     const t = createCloudTranscriber();
     const text = await t.transcribeFile(fileSource("D:/x/voice.wav"));
-    expect(text).toBe("你好，我是蕙");
+    expect(text).toBe("你好，我是测试角色");
     expect(calls[0]!.url).toBe("https://api.example.com/v1/audio/transcriptions");
     expect(calls[0]!.method).toBe("POST");
     expect(calls[0]!.auth).toBe("Bearer sk-test");

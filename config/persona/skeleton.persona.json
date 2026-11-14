@@ -1,0 +1,13 @@
+{
+  "spec": "chara_card_v3",
+  "data": {
+    "name": "skeleton",
+    "description": "（待填写）角色是什么、从哪来、现在在做什么。",
+    "personality": "（待填写）性格要点，短句列举。",
+    "scenario": "（待填写）和用户的关系、当前场景。",
+    "first_mes": "（待填写）角色开口的第一句话。",
+    "mes_example": "（待填写，可选）对话样例，用 <START> 分段。",
+    "system_prompt": "（待填写，可选）追加到 system 的角色专属指令。",
+    "tags": ["skeleton", "todo"]
+  }
+}

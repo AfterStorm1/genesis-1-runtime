@@ -40,7 +40,7 @@ describe("qq bot (onebot 11 parsing)", () => {
         { type: "text", data: { text: " 你好呀" } },
       ],
     };
-    expect(extractUserText(ev, 100, "蕙")).toBe("你好呀");
+    expect(extractUserText(ev, 100, "bot")).toBe("你好呀");
   });
 
   it("触发词开头触发并去掉前缀；无关消息返回 null", () => {
@@ -49,10 +49,10 @@ describe("qq bot (onebot 11 parsing)", () => {
       message_type: "group",
       group_id: 123,
       self_id: 100,
-      raw_message: "蕙 你在吗",
+      raw_message: "bot 你在吗",
     };
-    expect(extractUserText(ev, 100, "蕙")).toBe("你在吗");
-    expect(extractUserText({ ...ev, raw_message: "今天天气不错" }, 100, "蕙")).toBeNull();
+    expect(extractUserText(ev, 100, "bot")).toBe("你在吗");
+    expect(extractUserText({ ...ev, raw_message: "今天天气不错" }, 100, "bot")).toBeNull();
   });
 
   it("消息中间出现触发词也触发（不要求第一个字）", () => {
@@ -61,10 +61,10 @@ describe("qq bot (onebot 11 parsing)", () => {
       message_type: "group",
       group_id: 123,
       self_id: 100,
-      raw_message: "你们知道蕙去哪了吗",
+      raw_message: "你们知道bot去哪了吗",
     };
-    expect(extractUserText(ev, 100, "蕙")).toBe("你们知道去哪了吗");
-    expect(extractUserText({ ...ev, raw_message: "没有那个字" }, 100, "蕙")).toBeNull();
+    expect(extractUserText(ev, 100, "bot")).toBe("你们知道去哪了吗");
+    expect(extractUserText({ ...ev, raw_message: "没有那个字" }, 100, "bot")).toBeNull();
   });
 
   it("字面 @（纯文本，无 CQ at 段）也视为提及", () => {
@@ -73,11 +73,11 @@ describe("qq bot (onebot 11 parsing)", () => {
       message_type: "group",
       group_id: 123,
       self_id: 100,
-      raw_message: "@蕙 理我一下",
+      raw_message: "@bot 理我一下",
     };
-    expect(extractUserText(ev, 100, "蕙")).toBe("理我一下");
-    expect(extractUserText({ ...ev, raw_message: "@ 蕙 在吗" }, 100, "蕙")).toBe("在吗");
-    expect(extractUserText({ ...ev, raw_message: "@别人 在吗" }, 100, "蕙")).toBeNull(); // 不是 @ 她
+    expect(extractUserText(ev, 100, "bot")).toBe("理我一下");
+    expect(extractUserText({ ...ev, raw_message: "@ bot 在吗" }, 100, "bot")).toBe("在吗");
+    expect(extractUserText({ ...ev, raw_message: "@别人 在吗" }, 100, "bot")).toBeNull(); // 不是 @ 她
   });
 
   it("stripCqCodes：清掉图片/表情等 CQ 码", () => {

@@ -1,7 +1,7 @@
 @echo off
 rem Genesis-1 chat launcher
 rem Usage:
-rem   chat.cmd            -> Hui persona (default protagonist)
+rem   chat.cmd            -> skeleton persona (default; fill config\persona\skeleton.persona.json)
 rem   chat.cmd example    -> example persona
 rem   online mode: put LLM_API_KEY into llm-config.cmd (see llm-config.example.cmd)
 cd /d %~dp0
@@ -10,7 +10,7 @@ rem Load local config if present (not committed to git)
 if exist "%~dp0llm-config.cmd" call "%~dp0llm-config.cmd"
 if not "%GENESIS_PERSONA%"=="" goto run
 if "%1"=="" (
-  set "GENESIS_PERSONA=config\persona\hui.persona.json"
+  set "GENESIS_PERSONA=config\persona\skeleton.persona.json"
 ) else (
   set "GENESIS_PERSONA=config\persona\%1.persona.json"
 )

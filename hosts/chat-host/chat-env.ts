@@ -47,11 +47,11 @@ export function readChatEnv(): ChatEnvConfig {
     personaPath:
       process.env.GENESIS_PERSONA !== undefined
         ? path.resolve(process.env.GENESIS_PERSONA)
-        : path.join(process.cwd(), "config", "persona", "hui.persona.json"),
+        : path.join(process.cwd(), "config", "persona", "skeleton.persona.json"),
     worldRulesPath:
       process.env.CHAT_WORLD_RULES !== undefined
         ? path.resolve(process.env.CHAT_WORLD_RULES)
-        : path.join(process.cwd(), "config", "world", "hui-rules.md"),
+        : path.join(process.cwd(), "config", "world", "rules.skeleton.md"),
     samplesPath:
       process.env.CHAT_REACTION_SAMPLES !== undefined
         ? path.resolve(process.env.CHAT_REACTION_SAMPLES)
