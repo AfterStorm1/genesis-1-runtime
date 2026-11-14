@@ -11,6 +11,7 @@ import { createWhisperCppEngine, runtimeTmpDir } from "../../adapters/stt/whispe
 import { fileSource } from "../../adapters/stt/voice-source";
 import { createImageDescriber } from "../../adapters/llm/image-vision";
 import { createTtsEngine } from "../../adapters/tts/edge-tts";
+import { countSpeakableChars, hasVoiceTags, splitSpeechSegments, stripVoiceTags } from "../../adapters/llm/performance-tags";
 import { concatAudio, inspectAudio, padSilenceFile, timeStretchFile } from "../../adapters/tts/audio-pad";
 import type { AudioStat } from "../../adapters/tts/audio-pad";
 
@@ -255,18 +256,16 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
 
   /** 给语音引擎补句读：台词无标点会让 TTS 失去降调（语音助手腔），合成前逐句补“。” */
   const forTts = (spoken: string): string => sentencesForTts(spoken).join("");
-  const sentencesForTts = (spoken: string): string[] =>
-    spoken
-      .split(/[。！？!?…]+|\s+/)
-      .filter((s) => s !== "")
-      .map((s) => {
-        const last = s.slice(-1);
-        return last === "？" || last === "?" || last === "！" || last === "!" || last === "…" ? s : `${s}。`;
-      });
-  /** 偶尔开头打个顿（“嗯，”）——一点点不完美更像真人；QQ_HESITATION_RATE 可调，0 关闭 */
+  /** 逐句切分：表演标签（`[息を吸う]`）不参与切分，会粘在它后面那句台词上 */
+  const sentencesForTts = (spoken: string): string[] => splitSpeechSegments(spoken);
+  /** 偶尔开头打个顿（“嗯，”）——一点点不完美更像真人；QQ_HESITATION_RATE 可调，0 关闭
+   *  日语台词或带表演标签的台词不加：会把中文口气词念进日语里 */
   const withHesitation = (spoken: string): string => {
     const rate = Number(process.env.QQ_HESITATION_RATE ?? 0.12);
-    if (rate > 0 && spoken.length >= 6 && Math.random() < rate) return `嗯，${spoken}`;
+    if (rate <= 0 || spoken.length < 6) return spoken;
+    if (hasVoiceTags(spoken)) return spoken;
+    if (/[\u3040-\u30ff]/.test(spoken)) return spoken; // 有假名 = 日语，别插中文
+    if (Math.random() < rate) return `嗯，${spoken}`;
     return spoken;
   };
 
@@ -289,14 +288,14 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
     const wantVoice =
       config.qqVoiceReply.enabled &&
       isTrusted &&
-      flat.length <= 120 &&
+      countSpeakableChars(flat) <= 120 && // 按“会念出来的字数”算，表演标签不算
       Date.now() >= voiceBreaker.openUntil && // 熔断期间直接文字
       Date.now() - (voiceLast.get(groupId) ?? 0) >= config.qqVoiceReply.cooldownMs;
     if (wantVoice) {
       const spoken = spokenSafe(flat);
       if (spoken === "") {
         // 剥完只剩动作描述：不发语音（动作本来就不该念），落回文字
-        const finalText = withKaomoji(groupId, chat, flat);
+        const finalText = withKaomoji(groupId, chat, stripVoiceTags(flat));
         for (const chunk of splitForSend(finalText, config.maxReplyLen)) {
           await httpPost(config.httpBase, "/send_group_msg", {
             group_id: groupNumber,
@@ -318,9 +317,9 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       const sentences = sentencesForTts(spokenWithHes);
       /** 一条回复最多在语音上花多久（云端抽风时别把人晾着）；超时整条落文字 */
       const voiceDeadline = Date.now() + Math.max(5000, envNum("QQ_TTS_BUDGET_MS", 20_000));
-      /** 质检门槛：字数越多，要求的最低有效语音越长（防“只合成了一两个字”） */
+      /** 质检门槛：会念出来的字数越多，要求的最低有效语音越长（表演标签不算字） */
       const minVoiced = (text: string): number =>
-        Math.max(0.35, text.replace(/[，。！？、…,.!?\s]/g, "").length * 0.16);
+        Math.max(0.35, countSpeakableChars(text) * 0.16);
       /** 熔断：连续 N 条回复都拿不到语音就纯文字一阵，避免每条都干等十几秒 */
       const breakerStrikes = Math.max(1, Math.round(envNum("QQ_TTS_BREAKER", 3)));
       const breakerMs = Math.max(30_000, envNum("QQ_TTS_BREAKER_MS", 300_000));
@@ -445,7 +444,8 @@ export async function runQqBot(config: QqBotConfig): Promise<void> {
       // eslint-disable-next-line no-console
       console.warn("[qq-bot] 语音不可用，落回文字回复");
     }
-    const final = withKaomoji(groupId, chat, flat); // 文字路径才加颜文字（语音读出来怪）
+    // 文字路径才加颜文字（语音读出来怪）；表演标签（`[息を吸う]`）只给 TTS 看，不显示给人
+    const final = withKaomoji(groupId, chat, stripVoiceTags(flat));
     for (const chunk of splitForSend(final, config.maxReplyLen)) {
       await httpPost(config.httpBase, "/send_group_msg", {
         group_id: groupNumber,
